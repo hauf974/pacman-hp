@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.DS_Store
+/data/maps/*.json
+!/data/maps/pacman.json
+coverage/
