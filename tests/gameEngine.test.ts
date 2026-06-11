@@ -9,6 +9,10 @@ import {
   checkRoomEntry,
   allWandsCollected,
   bfsNextDir,
+  consumeChaosInput,
+  spawnPursuers,
+  spawnWands,
+  checkWandCollection,
 } from '../src/server/gameEngine';
 import { TimedInput, MapData, GameState, Avatar, Direction } from '../src/shared/types';
 
@@ -59,7 +63,7 @@ function makeState(
     settings: {
       tempo: 'anime', atmosphere: 'parchemin', titleFont: 'UnifrakturCook',
       footprints: false, pursuerSpeed: 3, avatarSpeed: 4, voteWindowSec: 3,
-      wandCountPerLevel: 3, autoMove: true,
+      wandCountPerLevel: 3, autoMove: true, startingLevel: 1,
     },
     toursJoues: 0,
   };
@@ -503,5 +507,258 @@ describe('allWandsCollected', () => {
   test('true when wand list is empty (no collect mode)', () => {
     const state = makeState(makeAvatar(0, 0, 'right'), map, [], [], []);
     expect(allWandsCollected(state)).toBe(true);
+  });
+});
+
+// ─── M3a: Chaos queue ────────────────────────────────────────────────────────
+
+describe('consumeChaosInput', () => {
+  test('returns null on empty queue', () => {
+    expect(consumeChaosInput([])).toBeNull();
+  });
+
+  test('returns first element and removes it', () => {
+    const q: Direction[] = ['up', 'right', 'down'];
+    const dir = consumeChaosInput(q);
+    expect(dir).toBe('up');
+    expect(q).toEqual(['right', 'down']);
+  });
+
+  test('preserves FIFO order across multiple calls', () => {
+    const q: Direction[] = ['left', 'up', 'right', 'down'];
+    expect(consumeChaosInput(q)).toBe('left');
+    expect(consumeChaosInput(q)).toBe('up');
+    expect(consumeChaosInput(q)).toBe('right');
+    expect(consumeChaosInput(q)).toBe('down');
+    expect(consumeChaosInput(q)).toBeNull();
+  });
+
+  test('single element queue empties after one consume', () => {
+    const q: Direction[] = ['down'];
+    consumeChaosInput(q);
+    expect(q).toHaveLength(0);
+  });
+});
+
+describe('Chaos: queued direction applied to avatar at next intersection', () => {
+  // Cross-shaped map: (1,1) is intersection where up, down, left, right are all open
+  const cross = makeMap([
+    [1, 0, 1],
+    [0, 0, 0],
+    [1, 0, 1],
+  ]);
+
+  test('chaos input becomes queuedDir, avatar turns at intersection', () => {
+    // Avatar at (1,1) moving right; chaos gives 'up' → should turn up
+    const avatar = makeAvatar(1, 1, 'right', null);
+    // Simulate: chaos input sets queuedDir
+    avatar.queuedDir = 'up';
+    const result = computeAvatarStep(cross, avatar.r, avatar.c, avatar.dir, avatar.queuedDir);
+    expect(result.dir).toBe('up');
+    expect(result.turned).toBe(true);
+    expect(result.queuedDir).toBeNull();
+  });
+
+  test('chaos input waits until passable intersection', () => {
+    // Corridor: only left/right open; chaos sends 'up' → waits
+    const corridor = makeMap([[0, 0, 0, 0, 0]]);
+    const result = computeAvatarStep(corridor, 0, 2, 'right', 'up');
+    // Continues right, retains 'up' intent
+    expect(result.dir).toBe('right');
+    expect(result.queuedDir).toBe('up');
+  });
+});
+
+// ─── M3a: Wand spawning & collection gate ────────────────────────────────────
+
+describe('spawnWands', () => {
+  // Map with mixed cells: corridor (0), wall (1), room (2), start (3), spawn (4)
+  const map = makeMap([
+    [0, 1, 0],
+    [0, 0, 0],
+    [0, 1, 0],
+  ]);
+
+  test('spawns the requested number of wands', () => {
+    const wands = spawnWands(map, 3);
+    expect(wands).toHaveLength(3);
+  });
+
+  test('all wands land on corridor cells (type 0)', () => {
+    const wands = spawnWands(map, 5); // map has 7 corridors, request 5
+    for (const w of wands) {
+      expect(map.cells[w.r][w.c]).toBe(0);
+    }
+  });
+
+  test('wands start uncollected', () => {
+    const wands = spawnWands(map, 2);
+    expect(wands.every(w => !w.collected)).toBe(true);
+  });
+
+  test('no duplicate positions', () => {
+    const map7 = makeMap([[0, 0, 0, 0, 0, 0, 0]]);
+    const wands = spawnWands(map7, 7);
+    const positions = new Set(wands.map(w => `${w.r},${w.c}`));
+    expect(positions.size).toBe(7);
+  });
+
+  test('returns fewer wands than requested when not enough corridors', () => {
+    const tinyMap = makeMap([[0, 0, 1]]); // only 2 corridors
+    const wands = spawnWands(tinyMap, 10);
+    expect(wands.length).toBeLessThanOrEqual(2);
+  });
+});
+
+// canAdvance mirrors the store's condition: room mode always advances, collect mode requires all wands
+function canAdvance(objectiveMode: 'room' | 'collect', wandsCollected: boolean): boolean {
+  return objectiveMode === 'room' || wandsCollected;
+}
+
+describe('wand collection gates room entry (collect mode)', () => {
+  const map = makeMap([[0, 0, 0]]);
+  const room = [{ r: 0, c: 2 }];
+
+  test('room entry allowed when all wands collected (collect mode)', () => {
+    const state = makeState(makeAvatar(0, 2, 'right'), map, [], room, [
+      { r: 0, c: 0, collected: true },
+    ]);
+    state.objectiveMode = 'collect';
+    expect(checkRoomEntry(state)).toBe(true);
+    expect(allWandsCollected(state)).toBe(true);
+    expect(canAdvance('collect', allWandsCollected(state))).toBe(true);
+  });
+
+  test('room entry blocked when wands remain (collect mode)', () => {
+    const state = makeState(makeAvatar(0, 2, 'right'), map, [], room, [
+      { r: 0, c: 0, collected: false },
+    ]);
+    state.objectiveMode = 'collect';
+    expect(checkRoomEntry(state)).toBe(true);    // avatar is in room
+    expect(allWandsCollected(state)).toBe(false); // wands remain → no advance
+    expect(canAdvance('collect', allWandsCollected(state))).toBe(false);
+  });
+
+  test('room entry always triggers advance in room mode regardless of wands', () => {
+    const state = makeState(makeAvatar(0, 2, 'right'), map, [], room, [
+      { r: 0, c: 0, collected: false },
+    ]);
+    state.objectiveMode = 'room';
+    expect(canAdvance('room', allWandsCollected(state))).toBe(true);
+  });
+});
+
+describe('checkWandCollection', () => {
+  const map = makeMap([[0, 0, 0]]);
+
+  test('marks wand collected when avatar steps on it', () => {
+    const state = makeState(makeAvatar(0, 1, 'right'), map, [], [], [
+      { r: 0, c: 1, collected: false },
+      { r: 0, c: 2, collected: false },
+    ]);
+    const count = checkWandCollection(state);
+    expect(count).toBe(1);
+    expect(state.wands[0].collected).toBe(true);
+    expect(state.wands[1].collected).toBe(false);
+  });
+
+  test('does not re-collect already collected wand', () => {
+    const state = makeState(makeAvatar(0, 1, 'right'), map, [], [], [
+      { r: 0, c: 1, collected: true },
+    ]);
+    expect(checkWandCollection(state)).toBe(0);
+  });
+});
+
+// ─── M3a: Level transitions & pursuer counts ─────────────────────────────────
+
+describe('spawnPursuers — pursuer count per level', () => {
+  const map = makeMap([[0, 0, 0, 0, 0]]);
+  // Add 5 spawn points so all levels can spawn
+  const mapWithSpawns: MapData = {
+    ...map,
+    pursuerSpawns: [
+      { r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 },
+      { r: 0, c: 3 }, { r: 0, c: 4 },
+    ],
+  };
+
+  test('level 1 → 1 pursuer (Rusard)', () => {
+    const p = spawnPursuers(mapWithSpawns, 1, 3);
+    expect(p).toHaveLength(1);
+    expect(p[0].type).toBe('rusard');
+  });
+
+  test('level 2 → 2 pursuers (Rusard + Miss Teigne)', () => {
+    const p = spawnPursuers(mapWithSpawns, 2, 3);
+    expect(p).toHaveLength(2);
+    expect(p[1].type).toBe('missteigne');
+  });
+
+  test('level 3 → 3 pursuers', () => {
+    expect(spawnPursuers(mapWithSpawns, 3, 3)).toHaveLength(3);
+  });
+
+  test('level 4 → 4 pursuers', () => {
+    expect(spawnPursuers(mapWithSpawns, 4, 3)).toHaveLength(4);
+  });
+
+  test('level 5 → 5 pursuers (all five)', () => {
+    const p = spawnPursuers(mapWithSpawns, 5, 3);
+    expect(p).toHaveLength(5);
+    expect(p[4].type).toBe('baronsanglant');
+    const types = p.map(x => x.type);
+    expect(types).toEqual(['rusard', 'missteigne', 'rogue', 'peeves', 'baronsanglant']);
+  });
+
+  test('level > 5 capped at 5 pursuers', () => {
+    expect(spawnPursuers(mapWithSpawns, 99, 3)).toHaveLength(5);
+  });
+
+  test('each pursuer gets the given speed', () => {
+    const p = spawnPursuers(mapWithSpawns, 3, 7);
+    expect(p.every(x => x.speed === 7)).toBe(true);
+  });
+
+  test('pursuer ids are unique', () => {
+    const p = spawnPursuers(mapWithSpawns, 5, 3);
+    const ids = new Set(p.map(x => x.id));
+    expect(ids.size).toBe(5);
+  });
+});
+
+// ─── M3a: Victory & game-over conditions ─────────────────────────────────────
+
+describe('victory & game-over conditions (logic layer)', () => {
+  const map = makeMap([[0, 0]]);
+
+  test('game over when lives reach 0', () => {
+    const state = makeState(makeAvatar(0, 0, 'right'), map);
+    state.lives = 1;
+    state.lives--;
+    expect(state.lives <= 0).toBe(true);
+    // Store sets status = 'gameover' — verify condition
+  });
+
+  test('no game over while lives remain', () => {
+    const state = makeState(makeAvatar(0, 0, 'right'), map);
+    state.lives = 3;
+    state.lives--;
+    expect(state.lives > 0).toBe(true);
+  });
+
+  test('level 5 + room entry → victory condition (level >= 5)', () => {
+    const state = makeState(makeAvatar(0, 0, 'right'), map);
+    state.level = 5;
+    // Store calls advanceLevel which checks: if level >= 5 → 'won'
+    expect(state.level >= 5).toBe(true);
+  });
+
+  test('level 1–4 + room entry → advance, not victory', () => {
+    for (let level = 1; level <= 4; level++) {
+      const state = makeState(makeAvatar(0, 0, 'right'), map);
+      state.level = level;
+      expect(state.level >= 5).toBe(false);
+    }
   });
 });

@@ -127,6 +127,21 @@ io.on('connection', (socket) => {
     gameStore.forceLevel(level);
   });
 
+  socket.on('admin:forceNextLevel', () => {
+    if (!adminSockets.has(socket.id)) return;
+    gameStore.forceNextLevel();
+  });
+
+  socket.on('admin:forceGameOver', () => {
+    if (!adminSockets.has(socket.id)) return;
+    gameStore.forceGameOver();
+  });
+
+  socket.on('admin:forceWin', () => {
+    if (!adminSockets.has(socket.id)) return;
+    gameStore.forceWin();
+  });
+
   socket.on('disconnect', () => {
     adminSockets.delete(socket.id);
     gameStore.playerDisconnect(socket.id);

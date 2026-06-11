@@ -22,6 +22,7 @@ import {
   aggregateDemocracy,
   buildVoteTally,
   applyDirectionToAvatar,
+  consumeChaosInput,
 } from './gameEngine';
 
 const MAPS_DIR = path.join(process.cwd(), 'data', 'maps');
@@ -35,6 +36,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   voteWindowSec: 3,
   wandCountPerLevel: 3,
   autoMove: true,
+  startingLevel: 1,
 };
 
 function loadMap(name: string): MapData {
@@ -167,8 +169,8 @@ class GameStore {
         s.voteTally = buildVoteTally(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
       } else {
         // Chaos: apply next queued direction
-        if (s.chaosQueue.length > 0) {
-          const dir = s.chaosQueue.shift()!;
+        const dir = consumeChaosInput(s.chaosQueue);
+        if (dir !== null) {
           applyDirectionToAvatar(s, dir);
           s.toursJoues++;
           hasInput = true;
@@ -283,7 +285,7 @@ class GameStore {
   start() {
     const s = this.state;
     if (s.status === 'lobby' || s.status === 'gameover' || s.status === 'won') {
-      s.level = 1;
+      s.level = Math.max(1, Math.min(5, s.settings.startingLevel));
       s.lives = 3;
       this.startLevel();
     } else if (s.status === 'paused') {
@@ -328,6 +330,25 @@ class GameStore {
   forceLevel(level: number) {
     this.state.level = Math.max(1, Math.min(5, level));
     this.startLevel();
+  }
+
+  forceNextLevel() {
+    this.advanceLevel();
+  }
+
+  forceGameOver() {
+    const s = this.state;
+    s.lives = 0;
+    s.status = 'gameover';
+    this.broadcast();
+    this.onGameOver?.();
+  }
+
+  forceWin() {
+    const s = this.state;
+    s.status = 'won';
+    this.broadcast();
+    this.onGameWon?.();
   }
 
   // ---- Player actions ----

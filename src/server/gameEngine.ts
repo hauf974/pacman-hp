@@ -228,6 +228,12 @@ export function spawnPursuers(map: MapData, level: number, speed: number): Pursu
   });
 }
 
+// Chaos mode: consume one direction from the queue; returns null when empty.
+export function consumeChaosInput(chaosQueue: Direction[]): Direction | null {
+  if (chaosQueue.length === 0) return null;
+  return chaosQueue.shift()!;
+}
+
 export function spawnWands(map: MapData, count: number): { r: number; c: number; collected: boolean }[] {
   const corridors: { r: number; c: number }[] = [];
   for (let r = 0; r < map.height; r++) {

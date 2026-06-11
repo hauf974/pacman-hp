@@ -87,6 +87,8 @@ export interface GameSettings {
   wandCountPerLevel: number;
   /** If false, avatar only moves one step per played direction (no continuous movement). */
   autoMove: boolean;
+  /** Level to start from when a new game begins (1–5). */
+  startingLevel: number;
 }
 
 export interface GameState {
@@ -131,6 +133,9 @@ export interface ClientToServerEvents {
   'admin:setSettings': (data: Partial<GameSettings>) => void;
   'admin:kick': (data: { playerId: string }) => void;
   'admin:forceLevel': (data: { level: number }) => void;
+  'admin:forceNextLevel': () => void;
+  'admin:forceGameOver': () => void;
+  'admin:forceWin': () => void;
 }
 
 export interface PublicPlayer {

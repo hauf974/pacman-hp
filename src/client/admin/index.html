@@ -203,7 +203,18 @@
   </div>
 
   <div class="control-row">
-    <label>Forcer niveau</label>
+    <label>Niveau de départ</label>
+    <select id="set-starting-level" onchange="sendSettings()">
+      <option value="1">Niveau 1 — Rusard</option>
+      <option value="2">Niveau 2 — + Miss Teigne</option>
+      <option value="3">Niveau 3 — + Rogue</option>
+      <option value="4">Niveau 4 — + Peeves</option>
+      <option value="5">Niveau 5 — + Baron Sanglant</option>
+    </select>
+  </div>
+
+  <div class="control-row">
+    <label>Forcer niveau précis</label>
     <select id="set-force-level">
       <option value="1">Niveau 1 — Rusard</option>
       <option value="2">Niveau 2 — + Miss Teigne</option>
@@ -212,6 +223,16 @@
       <option value="5">Niveau 5 — + Baron Sanglant</option>
     </select>
     <button class="btn" onclick="forceLevel()">Forcer</button>
+  </div>
+</div>
+
+<!-- Force actions -->
+<div class="section">
+  <h2>Actions immédiates</h2>
+  <div class="btn-row">
+    <button class="btn" onclick="send('admin:forceNextLevel')">⏭ Niveau suivant</button>
+    <button class="btn danger" onclick="confirmSend('admin:forceGameOver', 'Forcer un game over ?')">💀 Forcer Game Over</button>
+    <button class="btn danger" onclick="confirmSend('admin:forceWin', 'Forcer la victoire ?')">🏆 Forcer Victoire</button>
   </div>
 </div>
 
@@ -271,7 +292,12 @@ function sendSettings() {
     avatarSpeed: parseFloat(document.getElementById('set-avatar-speed').value),
     pursuerSpeed: parseFloat(document.getElementById('set-pursuer-speed').value),
     autoMove: document.getElementById('set-auto-move').value === 'true',
+    startingLevel: parseInt(document.getElementById('set-starting-level').value),
   });
+}
+
+function confirmSend(event, msg) {
+  if (confirm(msg)) send(event);
 }
 
 function forceLevel() {
@@ -305,6 +331,8 @@ function updateUI(s) {
   document.getElementById('set-objective').value = s.objectiveMode;
   if (document.activeElement.id !== 'set-auto-move')
     document.getElementById('set-auto-move').value = String(s.settings.autoMove);
+  if (document.activeElement.id !== 'set-starting-level')
+    document.getElementById('set-starting-level').value = s.settings.startingLevel;
 
   // Player list
   const list = document.getElementById('player-list');
