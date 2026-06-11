@@ -45,8 +45,16 @@ function loadMap(name: string): MapData {
   return JSON.parse(raw) as MapData;
 }
 
-function createInitialState(): GameState {
-  const map = loadMap('pacman');
+function loadMapSafe(name: string): MapData {
+  try {
+    return loadMap(name);
+  } catch {
+    return loadMap('pacman');
+  }
+}
+
+function createInitialState(mapName = 'pacman'): GameState {
+  const map = loadMapSafe(mapName);
   return {
     status: 'lobby',
     mode: 'democracy',
@@ -74,6 +82,7 @@ function createInitialState(): GameState {
 
 class GameStore {
   private state: GameState;
+  private activeMapName = 'pacman';
   private avatarTickAccum = 0;
   private pursuerTickAccum = 0;
   private onBroadcast?: (state: PublicGameState) => void;
@@ -302,10 +311,35 @@ class GameStore {
   }
 
   reset() {
-    this.state = createInitialState();
+    this.state = createInitialState(this.activeMapName);
     this.avatarTickAccum = 0;
     this.pursuerTickAccum = 0;
     this.broadcast();
+  }
+
+  getActiveMapName(): string {
+    return this.activeMapName;
+  }
+
+  /**
+   * Switch the active map. Only allowed outside an ongoing level
+   * (lobby / gameover / won) so a running game is never disrupted.
+   */
+  setActiveMap(map: MapData): { ok: boolean; reason?: string } {
+    const s = this.state;
+    if (!(s.status === 'lobby' || s.status === 'gameover' || s.status === 'won')) {
+      return { ok: false, reason: 'Changement de carte impossible en pleine partie (lobby ou reset uniquement).' };
+    }
+    this.activeMapName = map.name;
+    s.activeMap = map;
+    s.avatar.r = map.avatarStart.r;
+    s.avatar.c = map.avatarStart.c;
+    s.avatar.dir = 'left';
+    s.avatar.queuedDir = null;
+    s.pursuers = [];
+    s.wands = [];
+    this.broadcast();
+    return { ok: true };
   }
 
   setMode(mode: 'democracy' | 'chaos') {

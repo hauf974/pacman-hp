@@ -118,6 +118,36 @@
   .player-pseudo { flex: 1; color: #e8c97e; font-size: 14px; }
   .player-status { font-size: 12px; color: #806040; }
   .player-input { font-size: 18px; width: 24px; }
+
+  /* ---- Map editor ---- */
+  #ed-canvas-wrap { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  #ed-canvas {
+    background: #100800;
+    border: 2px solid #5a3a0a;
+    border-radius: 6px;
+    image-rendering: pixelated;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .ed-side { flex: 1; min-width: 260px; }
+  .ed-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .ed-tool {
+    padding: 7px 12px; font-size: 13px; background: #2a1500; color: #c8a96e;
+    border: 2px solid #5a3a0a; border-radius: 5px; cursor: pointer; font-family: 'Georgia', serif;
+  }
+  .ed-tool:hover { background: #3d2200; }
+  .ed-tool.active { background: #8b5e1a; color: #1a0e00; border-color: #e8c97e; }
+  .ed-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: middle; border: 1px solid #000; }
+  #ed-errors { list-style: none; margin: 8px 0; padding: 0; }
+  #ed-errors li { color: #ff8866; font-size: 13px; padding: 3px 0 3px 18px; position: relative; }
+  #ed-errors li::before { content: '⚠'; position: absolute; left: 0; }
+  #ed-status { font-size: 13px; margin: 8px 0; min-height: 18px; }
+  #ed-status.ok { color: #80c080; }
+  #ed-status.err { color: #ff6644; }
+  .ed-field { display: inline-flex; align-items: center; gap: 6px; margin: 0 12px 8px 0; }
+  .ed-field input[type=number], .ed-field input[type=text] { width: 70px; }
+  .ed-field input[type=text]#ed-name { width: 160px; }
+  .ed-legend { font-size: 12px; color: #806040; margin-top: 8px; line-height: 1.7; }
 </style>
 </head>
 <body>
@@ -233,6 +263,72 @@
     <button class="btn" onclick="send('admin:forceNextLevel')">⏭ Niveau suivant</button>
     <button class="btn danger" onclick="confirmSend('admin:forceGameOver', 'Forcer un game over ?')">💀 Forcer Game Over</button>
     <button class="btn danger" onclick="confirmSend('admin:forceWin', 'Forcer la victoire ?')">🏆 Forcer Victoire</button>
+  </div>
+</div>
+
+<!-- Map editor -->
+<div class="section">
+  <h2>Éditeur de cartes</h2>
+
+  <!-- Map management -->
+  <div style="margin-bottom:12px">
+    <div class="ed-field">
+      <label>Cartes</label>
+      <select id="ed-maps" style="min-width:160px"></select>
+      <button class="ed-tool" onclick="edLoad()">Charger</button>
+      <button class="ed-tool" onclick="edDuplicate()">Dupliquer</button>
+      <button class="ed-tool" onclick="edDelete()">Supprimer</button>
+      <button class="ed-tool" onclick="edSetActive()">✓ Activer</button>
+    </div>
+    <div class="ed-field">
+      <label>Nom</label>
+      <input type="text" id="ed-name" value="ma-carte" />
+      <button class="btn" style="padding:7px 14px" onclick="edSave()">💾 Enregistrer</button>
+    </div>
+    <div class="ed-field">
+      <button class="ed-tool" onclick="edExport()">⬇ Export JSON</button>
+      <label class="ed-tool" style="display:inline-block">⬆ Import JSON
+        <input type="file" id="ed-import" accept="application/json" style="display:none" onchange="edImport(event)" />
+      </label>
+    </div>
+  </div>
+
+  <!-- Grid size + generation -->
+  <div style="margin-bottom:12px">
+    <div class="ed-field"><label>Largeur</label><input type="number" id="ed-w" min="11" max="41" step="2" value="23" /></div>
+    <div class="ed-field"><label>Hauteur</label><input type="number" id="ed-h" min="11" max="41" step="2" value="23" /></div>
+    <button class="ed-tool" onclick="edNewGrid()">Nouvelle grille</button>
+    <span style="margin:0 8px;color:#5a3a0a">│</span>
+    <div class="ed-field"><label>Densité murs</label><input type="number" id="ed-density" min="0.1" max="0.8" step="0.1" value="0.4" /></div>
+    <div class="ed-field"><label>Spawns</label><input type="number" id="ed-spawncount" min="1" max="5" value="5" /></div>
+    <button class="btn" style="padding:7px 14px" onclick="edGenerate()">🎲 Générer</button>
+  </div>
+
+  <div id="ed-canvas-wrap">
+    <canvas id="ed-canvas" width="460" height="460"></canvas>
+    <div class="ed-side">
+      <div class="ed-tools">
+        <button class="ed-tool active" data-tool="wall"><span class="ed-swatch" style="background:#6b4a1a"></span>Mur</button>
+        <button class="ed-tool" data-tool="corridor"><span class="ed-swatch" style="background:#100800"></span>Couloir</button>
+        <button class="ed-tool" data-tool="room"><span class="ed-swatch" style="background:#2e7d32"></span>Salle</button>
+        <button class="ed-tool" data-tool="door"><span class="ed-swatch" style="background:#7CFC00"></span>Porte</button>
+        <button class="ed-tool" data-tool="avatar"><span class="ed-swatch" style="background:#e8c97e"></span>Avatar</button>
+        <button class="ed-tool" data-tool="spawn"><span class="ed-swatch" style="background:#cc4400"></span>Spawn</button>
+        <button class="ed-tool" data-tool="tunnel"><span class="ed-swatch" style="background:#22c0d0"></span>Tunnel</button>
+      </div>
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="ed-tool" onclick="edContour()">Tracer le contour</button>
+        <button class="ed-tool" onclick="edClear()">Tout effacer</button>
+        <button class="btn" style="padding:7px 14px" onclick="edValidate()">Valider</button>
+      </div>
+      <div id="ed-status"></div>
+      <ul id="ed-errors"></ul>
+      <div class="ed-legend">
+        Clic/glisser pour peindre. <b>Porte</b> : une seule, sur une case couloir bordant la Salle.
+        <b>Avatar</b> : unique. <b>Spawns</b> : 1 à 5. <b>Tunnel</b> : cliquez un bord (gauche/droite ou haut/bas) — les deux côtés s'ouvrent.<br>
+        Le changement de carte active ne s'applique qu'au lobby / après reset.
+      </div>
+    </div>
   </div>
 </div>
 
@@ -358,6 +454,360 @@ function kickPlayer(id) {
 function escHtml(s) {
   return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
+
+// ─────────────────────────── Map editor ───────────────────────────
+const WALL = 1, CORRIDOR = 0, ROOM = 2, AVATAR = 3, SPAWN = 4;
+let edMap = null;          // { name, width, height, cells, roomDoor, tunnels }
+let edTool = 'wall';
+let edPainting = false;
+const edCanvas = document.getElementById('ed-canvas');
+const edCtx = edCanvas.getContext('2d');
+
+function edBlank(w, h) {
+  const cells = [];
+  for (let r = 0; r < h; r++) {
+    const row = [];
+    for (let c = 0; c < w; c++) {
+      const border = r === 0 || r === h - 1 || c === 0 || c === w - 1;
+      row.push(border ? WALL : CORRIDOR);
+    }
+    cells.push(row);
+  }
+  return { name: document.getElementById('ed-name').value || 'ma-carte',
+           width: w, height: h, cells, roomDoor: null, tunnels: { horizontal: [], vertical: [] } };
+}
+
+function edCellPx() {
+  const max = Math.max(edMap.width, edMap.height);
+  return Math.max(6, Math.floor(460 / max));
+}
+
+function edRender() {
+  if (!edMap) return;
+  const cell = edCellPx();
+  edCanvas.width = edMap.width * cell;
+  edCanvas.height = edMap.height * cell;
+  const tunH = new Set(edMap.tunnels.horizontal);
+  const tunV = new Set(edMap.tunnels.vertical);
+  for (let r = 0; r < edMap.height; r++) {
+    for (let c = 0; c < edMap.width; c++) {
+      const v = edMap.cells[r][c];
+      let fill = '#100800';
+      if (v === WALL) fill = '#6b4a1a';
+      else if (v === ROOM) fill = '#2e7d32';
+      else if (v === AVATAR) fill = '#5a3a0a';
+      else if (v === SPAWN) fill = '#3a1500';
+      edCtx.fillStyle = fill;
+      edCtx.fillRect(c * cell, r * cell, cell, cell);
+      // marker overlays
+      if (v === AVATAR || v === SPAWN) {
+        edCtx.fillStyle = v === AVATAR ? '#e8c97e' : '#cc4400';
+        edCtx.beginPath();
+        edCtx.arc(c * cell + cell / 2, r * cell + cell / 2, cell * 0.35, 0, Math.PI * 2);
+        edCtx.fill();
+      }
+      // grid lines
+      edCtx.strokeStyle = 'rgba(90,58,10,0.25)';
+      edCtx.strokeRect(c * cell, r * cell, cell, cell);
+      // tunnel border highlight
+      const onLR = c === 0 || c === edMap.width - 1;
+      const onTB = r === 0 || r === edMap.height - 1;
+      if ((onLR && tunH.has(r)) || (onTB && tunV.has(c))) {
+        edCtx.strokeStyle = '#22c0d0';
+        edCtx.lineWidth = 2;
+        edCtx.strokeRect(c * cell + 1, r * cell + 1, cell - 2, cell - 2);
+        edCtx.lineWidth = 1;
+      }
+    }
+  }
+  // door arch
+  if (edMap.roomDoor) {
+    const { r, c } = edMap.roomDoor;
+    edCtx.strokeStyle = '#7CFC00';
+    edCtx.lineWidth = Math.max(2, cell * 0.18);
+    edCtx.strokeRect(c * cell + 2, r * cell + 2, cell - 4, cell - 4);
+    edCtx.lineWidth = 1;
+  }
+}
+
+function edSetTool(t) {
+  edTool = t;
+  document.querySelectorAll('.ed-tool[data-tool]').forEach(b => {
+    b.classList.toggle('active', b.dataset.tool === t);
+  });
+}
+document.querySelectorAll('.ed-tool[data-tool]').forEach(b => {
+  b.addEventListener('click', () => edSetTool(b.dataset.tool));
+});
+
+function edCellAt(ev) {
+  const rect = edCanvas.getBoundingClientRect();
+  const cell = edCellPx();
+  const x = (ev.clientX - rect.left) * (edCanvas.width / rect.width);
+  const y = (ev.clientY - rect.top) * (edCanvas.height / rect.height);
+  const c = Math.floor(x / cell);
+  const r = Math.floor(y / cell);
+  if (r < 0 || r >= edMap.height || c < 0 || c >= edMap.width) return null;
+  return { r, c };
+}
+
+function edToggleTunnel(r, c) {
+  const W = edMap.width, H = edMap.height;
+  const onLR = c === 0 || c === W - 1;
+  const onTB = r === 0 || r === H - 1;
+  if (onLR) {
+    const arr = edMap.tunnels.horizontal;
+    const i = arr.indexOf(r);
+    if (i >= 0) { arr.splice(i, 1); edMap.cells[r][0] = WALL; edMap.cells[r][W - 1] = WALL; }
+    else { arr.push(r); edMap.cells[r][0] = CORRIDOR; edMap.cells[r][W - 1] = CORRIDOR; }
+  } else if (onTB) {
+    const arr = edMap.tunnels.vertical;
+    const i = arr.indexOf(c);
+    if (i >= 0) { arr.splice(i, 1); edMap.cells[0][c] = WALL; edMap.cells[H - 1][c] = WALL; }
+    else { arr.push(c); edMap.cells[0][c] = CORRIDOR; edMap.cells[H - 1][c] = CORRIDOR; }
+  }
+}
+
+function edPaint(r, c) {
+  const cells = edMap.cells;
+  switch (edTool) {
+    case 'wall':
+      cells[r][c] = WALL;
+      if (edMap.roomDoor && edMap.roomDoor.r === r && edMap.roomDoor.c === c) edMap.roomDoor = null;
+      break;
+    case 'corridor':
+      cells[r][c] = CORRIDOR;
+      break;
+    case 'room':
+      cells[r][c] = ROOM;
+      if (edMap.roomDoor && edMap.roomDoor.r === r && edMap.roomDoor.c === c) edMap.roomDoor = null;
+      break;
+    case 'door':
+      cells[r][c] = CORRIDOR;     // door sits on a corridor cell
+      edMap.roomDoor = { r, c };  // unique
+      break;
+    case 'avatar': {
+      for (let rr = 0; rr < edMap.height; rr++)
+        for (let cc = 0; cc < edMap.width; cc++)
+          if (cells[rr][cc] === AVATAR) cells[rr][cc] = CORRIDOR;
+      cells[r][c] = AVATAR;       // unique
+      break;
+    }
+    case 'spawn': {
+      if (cells[r][c] === SPAWN) cells[r][c] = CORRIDOR;
+      else {
+        const count = cells.flat().filter(v => v === SPAWN).length;
+        if (count < 5) cells[r][c] = SPAWN;
+        else edSay('5 spawns maximum.', 'err');
+      }
+      break;
+    }
+    case 'tunnel':
+      edToggleTunnel(r, c);
+      break;
+  }
+}
+
+const edDragTools = new Set(['wall', 'corridor', 'room']);
+edCanvas.addEventListener('pointerdown', ev => {
+  if (!edMap) return;
+  ev.preventDefault();
+  edPainting = true;
+  const p = edCellAt(ev);
+  if (p) { edPaint(p.r, p.c); edRender(); }
+});
+edCanvas.addEventListener('pointermove', ev => {
+  if (!edPainting || !edMap || !edDragTools.has(edTool)) return;
+  const p = edCellAt(ev);
+  if (p) { edPaint(p.r, p.c); edRender(); }
+});
+window.addEventListener('pointerup', () => { edPainting = false; });
+
+function edSay(msg, cls) {
+  const el = document.getElementById('ed-status');
+  el.className = cls || '';
+  el.textContent = msg;
+}
+function edShowErrors(errors) {
+  const ul = document.getElementById('ed-errors');
+  ul.innerHTML = (errors || []).map(e => `<li>${escHtml(e)}</li>`).join('');
+}
+
+// Build a full MapData payload from the editor state.
+function edBuildMap() {
+  const room = [], spawns = [];
+  let avatarStart = null;
+  for (let r = 0; r < edMap.height; r++) {
+    for (let c = 0; c < edMap.width; c++) {
+      const v = edMap.cells[r][c];
+      if (v === ROOM) room.push({ r, c });
+      else if (v === SPAWN) spawns.push({ r, c });
+      else if (v === AVATAR) avatarStart = { r, c };
+    }
+  }
+  return {
+    name: document.getElementById('ed-name').value.trim() || 'ma-carte',
+    width: edMap.width, height: edMap.height, cells: edMap.cells,
+    avatarStart: avatarStart || { r: 1, c: 1 },
+    pursuerSpawns: spawns, room, roomDoor: edMap.roomDoor || undefined,
+    tunnels: edMap.tunnels,
+  };
+}
+
+// ---- Toolbar actions ----
+function edNewGrid() {
+  let w = parseInt(document.getElementById('ed-w').value);
+  let h = parseInt(document.getElementById('ed-h').value);
+  w = Math.max(11, Math.min(41, w || 23));
+  h = Math.max(11, Math.min(41, h || 23));
+  edMap = edBlank(w, h);
+  edShowErrors([]); edSay('Nouvelle grille ' + w + '×' + h + '.', '');
+  edRender();
+}
+function edContour() {
+  if (!edMap) return;
+  const W = edMap.width, H = edMap.height;
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++)
+    if (r === 0 || r === H - 1 || c === 0 || c === W - 1) edMap.cells[r][c] = WALL;
+  edMap.tunnels = { horizontal: [], vertical: [] };
+  edRender();
+}
+function edClear() {
+  if (!edMap) return;
+  edMap = edBlank(edMap.width, edMap.height);
+  edShowErrors([]); edRender();
+}
+
+function edRefreshList(selectName) {
+  if (!authed) return;
+  socket.emit('map:list', (names) => {
+    const sel = document.getElementById('ed-maps');
+    sel.innerHTML = (names || []).map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+    if (selectName && names.includes(selectName)) sel.value = selectName;
+  });
+}
+function edLoad() {
+  if (!authed) return alert('Authentifiez-vous d\'abord');
+  const name = document.getElementById('ed-maps').value;
+  if (!name) return;
+  socket.emit('map:get', { name }, (map) => {
+    if (!map) return edSay('Carte introuvable.', 'err');
+    edMap = { name: map.name, width: map.width, height: map.height, cells: map.cells,
+              roomDoor: map.roomDoor || null,
+              tunnels: map.tunnels || { horizontal: [], vertical: [] } };
+    document.getElementById('ed-name').value = map.name;
+    document.getElementById('ed-w').value = map.width;
+    document.getElementById('ed-h').value = map.height;
+    edShowErrors([]); edSay('Carte « ' + map.name + ' » chargée.', 'ok');
+    edRender();
+  });
+}
+function edSave() {
+  if (!authed) return alert('Authentifiez-vous d\'abord');
+  if (!edMap) return;
+  socket.emit('map:save', { map: edBuildMap() }, (res) => {
+    if (!res.ok) { edSay('Échec de l\'enregistrement.', 'err'); edShowErrors(res.errors); return; }
+    document.getElementById('ed-name').value = res.name;
+    edShowErrors(res.errors);
+    if (res.errors && res.errors.length) edSay('Enregistrée « ' + res.name + ' » (invalide — corrigez avant d\'activer).', 'err');
+    else edSay('Enregistrée « ' + res.name +' » ✓ (valide).', 'ok');
+    edRefreshList(res.name);
+  });
+}
+function edDuplicate() {
+  if (!authed) return alert('Authentifiez-vous d\'abord');
+  const name = document.getElementById('ed-maps').value;
+  if (!name) return;
+  socket.emit('map:duplicate', { name }, (res) => {
+    if (!res.ok) return edSay(res.error || 'Échec.', 'err');
+    edSay('Dupliquée → « ' + res.name + ' ».', 'ok');
+    edRefreshList(res.name);
+  });
+}
+function edDelete() {
+  if (!authed) return alert('Authentifiez-vous d\'abord');
+  const name = document.getElementById('ed-maps').value;
+  if (!name || !confirm('Supprimer la carte « ' + name + ' » ?')) return;
+  socket.emit('map:delete', { name }, (res) => {
+    if (!res.ok) return edSay(res.error || 'Échec.', 'err');
+    edSay('Carte supprimée.', 'ok');
+    edRefreshList();
+  });
+}
+function edSetActive() {
+  if (!authed) return alert('Authentifiez-vous d\'abord');
+  const name = document.getElementById('ed-maps').value;
+  if (!name) return;
+  socket.emit('map:setActive', { name }, (res) => {
+    if (!res.ok) return edSay(res.error || 'Échec.', 'err');
+    edSay('Carte active : « ' + name + ' ».', 'ok');
+  });
+}
+function edGenerate() {
+  if (!authed) return alert('Authentifiez-vous d\'abord');
+  const params = {
+    width: parseInt(document.getElementById('ed-w').value) || 23,
+    height: parseInt(document.getElementById('ed-h').value) || 23,
+    density: parseFloat(document.getElementById('ed-density').value) || 0.4,
+    spawnCount: parseInt(document.getElementById('ed-spawncount').value) || 5,
+  };
+  edSay('Génération…', '');
+  socket.emit('map:generate', params, (res) => {
+    if (!res.ok || !res.map) return edSay(res.error || 'Génération échouée.', 'err');
+    const map = res.map;
+    edMap = { name: map.name, width: map.width, height: map.height, cells: map.cells,
+              roomDoor: map.roomDoor || null,
+              tunnels: map.tunnels || { horizontal: [], vertical: [] } };
+    document.getElementById('ed-name').value = map.name;
+    edShowErrors([]); edSay('Carte générée — éditez puis enregistrez.', 'ok');
+    edRender();
+  });
+}
+function edValidate() {
+  if (!authed) return alert('Authentifiez-vous d\'abord');
+  if (!edMap) return;
+  socket.emit('map:validate', { map: edBuildMap() }, (res) => {
+    edShowErrors(res.errors);
+    edSay(res.valid ? 'Carte valide ✓ — activable.' : 'Carte invalide (' + res.errors.length + ' problème(s)).', res.valid ? 'ok' : 'err');
+  });
+}
+function edExport() {
+  if (!edMap) return;
+  const blob = new Blob([JSON.stringify(edBuildMap(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (document.getElementById('ed-name').value || 'carte') + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function edImport(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const map = JSON.parse(reader.result);
+      if (!map.width || !map.height || !Array.isArray(map.cells)) throw new Error('format');
+      edMap = { name: map.name || 'importee', width: map.width, height: map.height, cells: map.cells,
+                roomDoor: map.roomDoor || null,
+                tunnels: map.tunnels || { horizontal: [], vertical: [] } };
+      document.getElementById('ed-name').value = edMap.name;
+      document.getElementById('ed-w').value = edMap.width;
+      document.getElementById('ed-h').value = edMap.height;
+      edShowErrors([]); edSay('Carte importée — pensez à l\'enregistrer.', 'ok');
+      edRender();
+    } catch (e) {
+      edSay('Fichier JSON invalide.', 'err');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+
+// Initialise editor on load and refresh map list once authenticated.
+edNewGrid();
+const _origDoAuth = doAuth;
+doAuth = function (secret) { _origDoAuth(secret); setTimeout(() => edRefreshList(), 200); };
 </script>
 </body>
 </html>

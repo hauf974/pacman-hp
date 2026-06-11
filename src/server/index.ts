@@ -5,7 +5,9 @@ import { Server as IOServer } from 'socket.io';
 import * as crypto from 'crypto';
 import * as QRCode from 'qrcode';
 import { gameStore } from './gameStore';
-import { Direction, GameSettings } from '../shared/types';
+import * as mapStore from './mapStore';
+import { generateMap, validateMap } from './mapEngine';
+import { Direction, GameSettings, MapData, MapGenParams } from '../shared/types';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? 'pacmage-admin';
@@ -140,6 +142,62 @@ io.on('connection', (socket) => {
   socket.on('admin:forceWin', () => {
     if (!adminSockets.has(socket.id)) return;
     gameStore.forceWin();
+  });
+
+  // ---- Map editor (admin-only, with ack callbacks) ----
+  const ack = <T>(cb: unknown, value: T) => {
+    if (typeof cb === 'function') (cb as (v: T) => void)(value);
+  };
+
+  socket.on('map:list', (cb: unknown) => {
+    if (!adminSockets.has(socket.id)) return ack(cb, [] as string[]);
+    ack(cb, mapStore.listMaps());
+  });
+
+  socket.on('map:get', ({ name }: { name: string }, cb: unknown) => {
+    if (!adminSockets.has(socket.id)) return ack(cb, null);
+    ack(cb, mapStore.getMap(name));
+  });
+
+  socket.on('map:save', ({ map }: { map: MapData }, cb: unknown) => {
+    if (!adminSockets.has(socket.id)) return ack(cb, { ok: false, errors: ['Non autorisé'] });
+    try {
+      const savedName = mapStore.saveMap(map);
+      const v = validateMap({ ...map, name: savedName });
+      ack(cb, { ok: true, name: savedName, errors: v.errors });
+    } catch (e) {
+      ack(cb, { ok: false, errors: [String((e as Error).message ?? e)] });
+    }
+  });
+
+  socket.on('map:duplicate', ({ name }: { name: string }, cb: unknown) => {
+    if (!adminSockets.has(socket.id)) return ack(cb, { ok: false, error: 'Non autorisé' });
+    ack(cb, mapStore.duplicateMap(name));
+  });
+
+  socket.on('map:delete', ({ name }: { name: string }, cb: unknown) => {
+    if (!adminSockets.has(socket.id)) return ack(cb, { ok: false, error: 'Non autorisé' });
+    ack(cb, mapStore.deleteMap(name, { activeName: gameStore.getActiveMapName() }));
+  });
+
+  socket.on('map:generate', (params: MapGenParams, cb: unknown) => {
+    if (!adminSockets.has(socket.id)) return ack(cb, { ok: false, error: 'Non autorisé' });
+    ack(cb, generateMap(params));
+  });
+
+  socket.on('map:validate', ({ map }: { map: MapData }, cb: unknown) => {
+    if (!adminSockets.has(socket.id)) return ack(cb, { valid: false, errors: ['Non autorisé'] });
+    ack(cb, validateMap(map));
+  });
+
+  socket.on('map:setActive', ({ name }: { name: string }, cb: unknown) => {
+    if (!adminSockets.has(socket.id)) return ack(cb, { ok: false, error: 'Non autorisé' });
+    const map = mapStore.getMap(name);
+    if (!map) return ack(cb, { ok: false, error: 'Carte introuvable.' });
+    const v = validateMap(map);
+    if (!v.valid) return ack(cb, { ok: false, error: 'Carte invalide : ' + v.errors.join(' ; ') });
+    const res = gameStore.setActiveMap(map);
+    ack(cb, { ok: res.ok, error: res.reason });
   });
 
   socket.on('disconnect', () => {

@@ -27,6 +27,8 @@ export interface MapData {
   tunnels: { horizontal: number[]; vertical: number[] };
   createdAt?: string;
   updatedAt?: string;
+  seed?: number;
+  note?: string;
 }
 
 export interface Avatar {
@@ -109,6 +111,21 @@ export interface GameState {
   toursJoues: number;
 }
 
+export interface MapGenParams {
+  width: number;
+  height: number;
+  /** Wall density 0.1–0.8 (higher = more walls / fewer loops). */
+  density: number;
+  /** Number of pursuer spawn points to place (1–5). */
+  spawnCount: number;
+  seed?: number;
+}
+
+export interface MapValidation {
+  valid: boolean;
+  errors: string[];
+}
+
 // Socket.IO event types
 export interface ServerToClientEvents {
   'state:update': (state: PublicGameState) => void;
@@ -136,6 +153,15 @@ export interface ClientToServerEvents {
   'admin:forceNextLevel': () => void;
   'admin:forceGameOver': () => void;
   'admin:forceWin': () => void;
+  // Map editor (admin) — all use ack callbacks
+  'map:list': (cb: (names: string[]) => void) => void;
+  'map:get': (data: { name: string }, cb: (map: MapData | null) => void) => void;
+  'map:save': (data: { map: MapData }, cb: (res: { ok: boolean; name?: string; errors?: string[] }) => void) => void;
+  'map:duplicate': (data: { name: string }, cb: (res: { ok: boolean; name?: string; error?: string }) => void) => void;
+  'map:delete': (data: { name: string }, cb: (res: { ok: boolean; error?: string }) => void) => void;
+  'map:generate': (data: MapGenParams, cb: (res: { ok: boolean; map?: MapData; error?: string }) => void) => void;
+  'map:validate': (data: { map: MapData }, cb: (res: MapValidation) => void) => void;
+  'map:setActive': (data: { name: string }, cb: (res: { ok: boolean; error?: string }) => void) => void;
 }
 
 export interface PublicPlayer {

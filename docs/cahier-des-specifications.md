@@ -200,7 +200,7 @@ La zone de jeu (le labyrinthe) est l'élément que l'animateur voudra **affiner,
   - `Salle sur Demande` (pièce — zone ouverte de plusieurs cases, **exception** à la règle « couloir 1 case »)
   - `départ avatar` (unique)
   - `apparition poursuivant` (1 à 5 ; jusqu'à 5 utilisés selon le niveau)
-- **Tunnels (wraparound)** visualisés : une case-couloir de bord communique avec la case opposée (gauche↔droite, haut↔bas).
+- **Tunnels (wraparound)** visualisés : une case-couloir de bord communique avec la case opposée (gauche↔droite, haut↔bas). Un tunnel est **explicite** dans `tunnels` (lignes/colonnes) et exige que **les deux bords opposés** soient ouverts ; l'outil « Tunnel » de l'éditeur ouvre les deux côtés d'un coup.
 
 ### 6 bis.2 Gestion des cartes
 - **Nommer / enregistrer / dupliquer / supprimer** une carte. Liste des cartes disponibles.
@@ -220,7 +220,7 @@ La zone de jeu (le labyrinthe) est l'élément que l'animateur voudra **affiner,
 - Une carte générée est **éditable** ensuite, exactement comme une carte nommée.
 
 ### 6 bis.4 Validation (avant activation)
-Une carte n'est activable que si : une Salle sur Demande présente et atteignable, un départ avatar, ≥ 1 spawn poursuivant, connexité des couloirs, aucun couloir > 1 case (hors pièce Salle). Les erreurs sont signalées dans l'éditeur.
+Une carte n'est activable que si : une Salle sur Demande présente avec une **porte unique** (case couloir adjacente à la Salle), un **départ avatar unique**, **1 à 5 spawns** poursuivants, **connexité** des couloirs (tunnels compris), **aucun couloir > 1 case** hors pièce Salle (aucune zone ouverte 2×2), et un **contour fermé sauf aux tunnels** (chaque tunnel ouvre les deux bords opposés). Les erreurs sont signalées dans l'éditeur ; l'activation d'une carte invalide est refusée côté serveur.
 
 ### 6 bis.5 Persistance
 Cartes stockées en **fichiers JSON dans un volume Docker** (survivent aux redémarrages), **sans base de données**. Format indicatif :
