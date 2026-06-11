@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920">
+<title>La Carte Ensorcelée</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a0e00;
+    color: #c8a96e;
+    font-family: 'Georgia', serif;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- Title bar ---- */
+  #titlebar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 6px 24px;
+    background: linear-gradient(180deg, #3d1f00 0%, #2a1200 100%);
+    border-bottom: 2px solid #8b5e1a;
+    height: 52px;
+    flex-shrink: 0;
+  }
+  #title-text {
+    font-size: 28px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    color: #e8c97e;
+    flex: 1;
+  }
+  #lives {
+    display: flex;
+    gap: 6px;
+    font-size: 24px;
+  }
+  #wands-display {
+    font-size: 18px;
+    color: #c8a96e;
+    background: rgba(0,0,0,0.3);
+    padding: 2px 12px;
+    border-radius: 4px;
+    border: 1px solid #8b5e1a;
+  }
+  #level-display {
+    font-size: 18px;
+    color: #c8a96e;
+    background: rgba(0,0,0,0.3);
+    padding: 2px 12px;
+    border-radius: 4px;
+    border: 1px solid #8b5e1a;
+  }
+
+  /* ---- Main area ---- */
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ---- Left panel: QR + chat ---- */
+  #left-panel {
+    width: 240px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba(20, 10, 0, 0.8);
+    border-right: 2px solid #5a3a0a;
+    padding: 12px;
+    gap: 10px;
+  }
+  #qr-block {
+    text-align: center;
+  }
+  #qr-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #e8c97e;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  #qr-img {
+    width: 160px;
+    height: 160px;
+    border: 2px solid #8b5e1a;
+    background: white;
+  }
+  #qr-subtitle {
+    font-size: 10px;
+    color: #a07040;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+  #players-count {
+    font-size: 13px;
+    color: #e8c97e;
+    margin-top: 4px;
+  }
+
+  #chat-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #e8c97e;
+    letter-spacing: 1px;
+    border-top: 1px solid #5a3a0a;
+    padding-top: 8px;
+  }
+  #chat-list {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+  }
+  .chat-line {
+    font-size: 12px;
+    color: #b89060;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chat-line .pseudo { color: #e8c97e; }
+  .chat-line .dir { color: #ff9944; }
+  .chat-line.join { color: #80c080; }
+  .chat-line.leave { color: #c08080; }
+
+  /* ---- Game zone (center) ---- */
+  #game-zone {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: #0d0700;
+  }
+  #game-canvas {
+    display: block;
+  }
+
+  /* ---- Right panel: votes ---- */
+  #right-panel {
+    width: 200px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba(20, 10, 0, 0.8);
+    border-left: 2px solid #5a3a0a;
+    padding: 12px;
+    gap: 8px;
+  }
+  #vote-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #e8c97e;
+    letter-spacing: 1px;
+  }
+  .vote-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .vote-label { font-size: 18px; width: 24px; }
+  .vote-bar-container {
+    flex: 1;
+    height: 16px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid #5a3a0a;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .vote-bar { height: 100%; background: #8b5e1a; transition: width 0.3s; }
+  .vote-count { font-size: 13px; color: #c8a96e; width: 22px; text-align: right; }
+  #tours-count {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #a07040;
+    border-top: 1px solid #5a3a0a;
+    padding-top: 8px;
+  }
+
+  /* ---- Overlay states ---- */
+  #overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 5, 0, 0.85);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 24px;
+    z-index: 10;
+  }
+  #overlay.visible { display: flex; }
+  #overlay-title {
+    font-size: 64px;
+    font-weight: bold;
+    color: #e8c97e;
+    text-align: center;
+    letter-spacing: 4px;
+  }
+  #overlay-sub {
+    font-size: 24px;
+    color: #c8a96e;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Title bar -->
+<div id="titlebar">
+  <div id="title-text">La Carte Ensorcelée</div>
+  <div id="lives"></div>
+  <div id="wands-display" style="display:none"></div>
+  <div id="level-display">Étage 1</div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <!-- Left: QR + chat -->
+  <div id="left-panel">
+    <div id="qr-block">
+      <div id="qr-title">Rejoignez la quête</div>
+      <img id="qr-img" src="/qr.png" alt="QR" />
+      <div id="qr-subtitle">Scannez le sceau pour aider nos amis à rejoindre la salle sur demande</div>
+      <div id="players-count">0 sorciers connectés</div>
+    </div>
+    <div id="chat-title">Le Grand Chahut</div>
+    <div id="chat-list"></div>
+  </div>
+
+  <!-- Center: canvas -->
+  <div id="game-zone">
+    <canvas id="game-canvas"></canvas>
+    <div id="overlay">
+      <div id="overlay-title"></div>
+      <div id="overlay-sub"></div>
+    </div>
+  </div>
+
+  <!-- Right: votes -->
+  <div id="right-panel">
+    <div id="vote-title">Votes</div>
+    <div class="vote-row">
+      <span class="vote-label">↑</span>
+      <div class="vote-bar-container"><div class="vote-bar" id="bar-up" style="width:0%"></div></div>
+      <span class="vote-count" id="cnt-up">0</span>
+    </div>
+    <div class="vote-row">
+      <span class="vote-label">↓</span>
+      <div class="vote-bar-container"><div class="vote-bar" id="bar-down" style="width:0%"></div></div>
+      <span class="vote-count" id="cnt-down">0</span>
+    </div>
+    <div class="vote-row">
+      <span class="vote-label">←</span>
+      <div class="vote-bar-container"><div class="vote-bar" id="bar-left" style="width:0%"></div></div>
+      <span class="vote-count" id="cnt-left">0</span>
+    </div>
+    <div class="vote-row">
+      <span class="vote-label">→</span>
+      <div class="vote-bar-container"><div class="vote-bar" id="bar-right" style="width:0%"></div></div>
+      <span class="vote-count" id="cnt-right">0</span>
+    </div>
+    <div id="tours-count">0 tours joués</div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+let state = null;
+const CELL = 36; // will be recalculated
+const CHAT_MAX = 40;
+const chatLines = [];
+
+function computeCellSize(mapW, mapH) {
+  const gameZone = document.getElementById('game-zone');
+  const availW = gameZone.clientWidth - 8;
+  const availH = gameZone.clientHeight - 8;
+  return Math.floor(Math.min(availW / mapW, availH / mapH));
+}
+
+function render() {
+  if (!state) return;
+  const { mapCells, mapWidth, mapHeight, avatar, pursuers, wands, status } = state;
+
+  const cell = computeCellSize(mapWidth, mapHeight);
+  const w = mapWidth * cell;
+  const h = mapHeight * cell;
+  canvas.width = w;
+  canvas.height = h;
+
+  // Background
+  ctx.fillStyle = '#0d0700';
+  ctx.fillRect(0, 0, w, h);
+
+  // Draw cells
+  for (let r = 0; r < mapHeight; r++) {
+    for (let c = 0; c < mapWidth; c++) {
+      const cellVal = mapCells[r][c];
+      const x = c * cell;
+      const y = r * cell;
+      if (cellVal === 1) {
+        // Wall
+        ctx.fillStyle = '#3d2200';
+        ctx.fillRect(x, y, cell, cell);
+        ctx.strokeStyle = '#5a3510';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
+      } else if (cellVal === 2) {
+        // Room
+        ctx.fillStyle = '#1a3a1a';
+        ctx.fillRect(x, y, cell, cell);
+        ctx.strokeStyle = '#3a8a3a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
+      }
+    }
+  }
+
+  // Draw wands
+  if (state.wands) {
+    for (const wand of state.wands) {
+      if (!wand.collected) {
+        const x = wand.c * cell + cell / 2;
+        const y = wand.r * cell + cell / 2;
+        ctx.fillStyle = '#ffdd44';
+        ctx.beginPath();
+        ctx.arc(x, y, cell * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ff9900';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw pursuers
+  const pursuerColors = {
+    rusard: '#ff6644',
+    missteigne: '#ff44aa',
+    rogue: '#6644ff',
+    peeves: '#44ffff',
+    baronsanglant: '#cccccc'
+  };
+  for (const p of pursuers) {
+    const x = p.c * cell + cell / 2;
+    const y = p.r * cell + cell / 2;
+    const color = pursuerColors[p.type] || '#ff4444';
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, cell * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x - cell * 0.12, y - cell * 0.08, cell * 0.1, 0, Math.PI * 2);
+    ctx.arc(x + cell * 0.12, y - cell * 0.08, cell * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw avatar
+  const ax = avatar.c * cell + cell / 2;
+  const ay = avatar.r * cell + cell / 2;
+  ctx.fillStyle = '#ffe066';
+  ctx.beginPath();
+  // Pac-Man mouth direction
+  const dirAngles = { right: 0, down: Math.PI/2, left: Math.PI, up: -Math.PI/2 };
+  const angle = dirAngles[avatar.dir] || 0;
+  const mouthAngle = 0.3;
+  ctx.arc(ax, ay, cell * 0.4, angle + mouthAngle, angle + Math.PI * 2 - mouthAngle);
+  ctx.lineTo(ax, ay);
+  ctx.fill();
+
+  // Overlay
+  updateOverlay(status);
+}
+
+function updateOverlay(status) {
+  const overlay = document.getElementById('overlay');
+  const title = document.getElementById('overlay-title');
+  const sub = document.getElementById('overlay-sub');
+  if (status === 'lobby') {
+    overlay.classList.add('visible');
+    title.textContent = 'En attente…';
+    sub.textContent = 'L\'animateur lancera la partie';
+  } else if (status === 'paused') {
+    overlay.classList.add('visible');
+    title.textContent = 'Pause';
+    sub.textContent = 'En attente de joueurs…';
+  } else if (status === 'levelTransition') {
+    overlay.classList.add('visible');
+    title.textContent = 'Salle sur Demande !';
+    sub.textContent = 'Niveau suivant…';
+  } else if (status === 'gameover') {
+    overlay.classList.add('visible');
+    title.textContent = 'Game Over';
+    sub.textContent = 'L\'animateur peut relancer';
+  } else if (status === 'won') {
+    overlay.classList.add('visible');
+    title.textContent = 'L\'Armée de Dumbledore vaincra !';
+    sub.textContent = '🎉 Victoire ! 🎉';
+  } else {
+    overlay.classList.remove('visible');
+  }
+}
+
+function updateHUD(s) {
+  // Lives
+  const livesEl = document.getElementById('lives');
+  livesEl.textContent = '❤'.repeat(s.lives) + '🖤'.repeat(Math.max(0, 3 - s.lives));
+
+  // Level
+  document.getElementById('level-display').textContent = `Étage ${s.level}`;
+
+  // Wands
+  const wandsEl = document.getElementById('wands-display');
+  if (s.objectiveMode === 'collect' && s.wandTotal > 0) {
+    wandsEl.style.display = '';
+    wandsEl.textContent = `Baguettes ${s.wandCollected}/${s.wandTotal}`;
+  } else {
+    wandsEl.style.display = 'none';
+  }
+
+  // Players count
+  const connected = s.players.filter(p => p.connected).length;
+  document.getElementById('players-count').textContent = `${connected} sorcier${connected !== 1 ? 's' : ''} connecté${connected !== 1 ? 's' : ''}`;
+
+  // Vote bars
+  const tally = s.voteTally;
+  const total = Math.max(1, tally.up + tally.down + tally.left + tally.right);
+  ['up','down','left','right'].forEach(dir => {
+    const pct = (tally[dir] / total * 100).toFixed(1);
+    document.getElementById(`bar-${dir}`).style.width = pct + '%';
+    document.getElementById(`cnt-${dir}`).textContent = tally[dir];
+  });
+
+  // Tours
+  document.getElementById('tours-count').textContent = `${s.toursJoues} tour${s.toursJoues !== 1 ? 's' : ''} joué${s.toursJoues !== 1 ? 's' : ''}`;
+}
+
+function addChatLine(event) {
+  const line = document.createElement('div');
+  line.className = 'chat-line';
+  if (event.type === 'input') {
+    const dirSymbols = { up: '↑', down: '↓', left: '←', right: '→' };
+    line.innerHTML = `<span class="pseudo">@${escHtml(event.pseudo)}</span> <span class="dir">${dirSymbols[event.dir] || ''}</span>`;
+  } else if (event.type === 'join') {
+    line.className += ' join';
+    line.textContent = `→ @${event.pseudo} est arrivé`;
+  } else if (event.type === 'leave') {
+    line.className += ' leave';
+    line.textContent = `← @${event.pseudo} est parti`;
+  } else if (event.type === 'kick') {
+    line.className += ' leave';
+    line.textContent = `⛔ @${event.pseudo} exclu`;
+  }
+  chatLines.unshift(line);
+  if (chatLines.length > CHAT_MAX) chatLines.pop();
+  const chatEl = document.getElementById('chat-list');
+  chatEl.innerHTML = '';
+  chatLines.forEach(l => chatEl.appendChild(l));
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+socket.on('state:update', (s) => {
+  state = s;
+  render();
+  updateHUD(s);
+});
+
+socket.on('chat:event', (event) => {
+  addChatLine(event);
+});
+
+// Render loop for smooth animation
+function loop() {
+  if (state) render();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

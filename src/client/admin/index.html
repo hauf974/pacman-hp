@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pac-Mage Admin</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a0e00;
+    color: #c8a96e;
+    font-family: 'Georgia', serif;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  h1 {
+    color: #e8c97e;
+    font-size: 24px;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+    border-bottom: 2px solid #5a3a0a;
+    padding-bottom: 10px;
+  }
+  h2 {
+    color: #c8a96e;
+    font-size: 16px;
+    margin: 16px 0 8px;
+    letter-spacing: 1px;
+  }
+  .section {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #5a3a0a;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* Auth */
+  #auth-block { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
+  #auth-input {
+    padding: 8px 12px;
+    background: #2a1500;
+    border: 1px solid #8b5e1a;
+    color: #e8c97e;
+    border-radius: 4px;
+    font-family: 'Georgia', serif;
+    width: 220px;
+  }
+  #auth-status { font-size: 14px; }
+  #auth-status.ok { color: #80c080; }
+  #auth-status.err { color: #ff6644; }
+
+  /* Buttons */
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    background: #3d2200;
+    color: #e8c97e;
+    border: 2px solid #8b5e1a;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Georgia', serif;
+    letter-spacing: 1px;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #5a3a0a; }
+  .btn:active { background: #8b5e1a; }
+  .btn.danger { border-color: #cc4400; color: #ff9966; }
+  .btn.danger:hover { background: #4a1500; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* Controls */
+  label { font-size: 14px; color: #a07040; }
+  select, input[type=number] {
+    background: #2a1500;
+    border: 1px solid #8b5e1a;
+    color: #e8c97e;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: 'Georgia', serif;
+    font-size: 14px;
+  }
+  .control-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .control-row label { min-width: 160px; }
+
+  /* Status */
+  #status-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .stat-box {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #5a3a0a;
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+  }
+  .stat-label { font-size: 11px; color: #806040; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-value { font-size: 22px; color: #e8c97e; margin-top: 4px; }
+
+  /* Player list */
+  #player-list { display: flex; flex-direction: column; gap: 6px; }
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid #3a2000;
+    border-radius: 4px;
+  }
+  .player-pseudo { flex: 1; color: #e8c97e; font-size: 14px; }
+  .player-status { font-size: 12px; color: #806040; }
+  .player-input { font-size: 18px; width: 24px; }
+</style>
+</head>
+<body>
+
+<h1>Pac-Mage — Console Animateur</h1>
+
+<!-- Auth -->
+<div id="auth-block">
+  <input id="auth-input" type="password" placeholder="Secret admin…" />
+  <button class="btn" onclick="doAuth()">Connexion</button>
+  <span id="auth-status"></span>
+</div>
+
+<!-- Status -->
+<div class="section">
+  <h2>État de la partie</h2>
+  <div id="status-info">
+    <div class="stat-box"><div class="stat-label">Statut</div><div class="stat-value" id="s-status">—</div></div>
+    <div class="stat-box"><div class="stat-label">Niveau</div><div class="stat-value" id="s-level">—</div></div>
+    <div class="stat-box"><div class="stat-label">Vies</div><div class="stat-value" id="s-lives">—</div></div>
+    <div class="stat-box"><div class="stat-label">Joueurs</div><div class="stat-value" id="s-players">—</div></div>
+    <div class="stat-box"><div class="stat-label">Mode</div><div class="stat-value" id="s-mode">—</div></div>
+    <div class="stat-box"><div class="stat-label">Tours</div><div class="stat-value" id="s-tours">—</div></div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="section">
+  <h2>Contrôles</h2>
+  <div class="btn-row">
+    <button class="btn" onclick="send('admin:start')">▶ Lancer / Reprendre</button>
+    <button class="btn" onclick="send('admin:pause')">⏸ Pause</button>
+    <button class="btn danger" onclick="send('admin:reset')">↺ Reset</button>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="section">
+  <h2>Réglages</h2>
+
+  <div class="control-row">
+    <label>Mode de contrôle</label>
+    <select id="set-mode" onchange="sendMode()">
+      <option value="democracy">Démocratie (vote)</option>
+      <option value="chaos">Chaos (file)</option>
+    </select>
+  </div>
+
+  <div class="control-row">
+    <label>Fenêtre de vote (sec)</label>
+    <input type="number" id="set-vote-window" min="0.5" max="10" step="0.5" value="3" onchange="sendSettings()" style="width:80px" />
+  </div>
+
+  <div class="control-row">
+    <label>Objectif</label>
+    <select id="set-objective" onchange="sendSettings()">
+      <option value="room">Atteindre la Salle</option>
+      <option value="collect">Collecter baguettes + Salle</option>
+    </select>
+  </div>
+
+  <div class="control-row">
+    <label>Baguettes par niveau</label>
+    <input type="number" id="set-wands" min="1" max="20" value="3" onchange="sendSettings()" style="width:80px" />
+  </div>
+
+  <div class="control-row">
+    <label>Vitesse avatar</label>
+    <input type="number" id="set-avatar-speed" min="1" max="12" step="0.5" value="4" onchange="sendSettings()" style="width:80px" />
+  </div>
+
+  <div class="control-row">
+    <label>Vitesse poursuivants</label>
+    <input type="number" id="set-pursuer-speed" min="1" max="12" step="0.5" value="3" onchange="sendSettings()" style="width:80px" />
+  </div>
+
+  <div class="control-row">
+    <label>Forcer niveau</label>
+    <select id="set-force-level">
+      <option value="1">Niveau 1 — Rusard</option>
+      <option value="2">Niveau 2 — + Miss Teigne</option>
+      <option value="3">Niveau 3 — + Rogue</option>
+      <option value="4">Niveau 4 — + Peeves</option>
+      <option value="5">Niveau 5 — + Baron Sanglant</option>
+    </select>
+    <button class="btn" onclick="forceLevel()">Forcer</button>
+  </div>
+</div>
+
+<!-- Players -->
+<div class="section">
+  <h2>Joueurs connectés</h2>
+  <div id="player-list"><em style="color:#604030;font-size:14px">Aucun joueur</em></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let authed = false;
+let currentState = null;
+
+socket.on('connect', () => {
+  const savedSecret = sessionStorage.getItem('admin_secret');
+  if (savedSecret) { doAuth(savedSecret); }
+});
+
+socket.on('state:update', (s) => {
+  currentState = s;
+  updateUI(s);
+});
+
+socket.on('admin:error', (msg) => {
+  const el = document.getElementById('auth-status');
+  el.className = 'err';
+  el.textContent = msg;
+});
+
+function doAuth(secret) {
+  const s = secret || document.getElementById('auth-input').value.trim();
+  if (!s) return;
+  sessionStorage.setItem('admin_secret', s);
+  socket.emit('admin:auth', { secret: s });
+  authed = true;
+  document.getElementById('auth-status').className = 'ok';
+  document.getElementById('auth-status').textContent = '✓ Connecté';
+}
+
+function send(event, data) {
+  if (!authed) { alert('Authentifiez-vous d\'abord'); return; }
+  socket.emit(event, data || {});
+}
+
+function sendMode() {
+  const mode = document.getElementById('set-mode').value;
+  send('admin:setMode', { mode });
+}
+
+function sendSettings() {
+  send('admin:setSettings', {
+    voteWindowSec: parseFloat(document.getElementById('set-vote-window').value),
+    objectiveMode: document.getElementById('set-objective').value,
+    wandCountPerLevel: parseInt(document.getElementById('set-wands').value),
+    avatarSpeed: parseFloat(document.getElementById('set-avatar-speed').value),
+    pursuerSpeed: parseFloat(document.getElementById('set-pursuer-speed').value),
+  });
+}
+
+function forceLevel() {
+  const level = parseInt(document.getElementById('set-force-level').value);
+  send('admin:forceLevel', { level });
+}
+
+function updateUI(s) {
+  const statusLabels = {
+    lobby: 'Lobby', playing: 'En jeu', paused: 'Pause',
+    levelTransition: 'Transition', gameover: 'Game Over', won: 'Victoire'
+  };
+  document.getElementById('s-status').textContent = statusLabels[s.status] || s.status;
+  document.getElementById('s-level').textContent = s.level;
+  document.getElementById('s-lives').textContent = '❤'.repeat(s.lives);
+  const connected = s.players.filter(p => p.connected).length;
+  document.getElementById('s-players').textContent = `${connected}/${s.players.length}`;
+  document.getElementById('s-mode').textContent = s.mode === 'democracy' ? 'Démo' : 'Chaos';
+  document.getElementById('s-tours').textContent = s.toursJoues;
+
+  // Sync settings inputs (don't override if user is editing)
+  if (document.activeElement.id !== 'set-vote-window')
+    document.getElementById('set-vote-window').value = s.settings.voteWindowSec;
+  if (document.activeElement.id !== 'set-wands')
+    document.getElementById('set-wands').value = s.settings.wandCountPerLevel;
+  if (document.activeElement.id !== 'set-avatar-speed')
+    document.getElementById('set-avatar-speed').value = s.settings.avatarSpeed;
+  if (document.activeElement.id !== 'set-pursuer-speed')
+    document.getElementById('set-pursuer-speed').value = s.settings.pursuerSpeed;
+  document.getElementById('set-mode').value = s.mode;
+  document.getElementById('set-objective').value = s.objectiveMode;
+
+  // Player list
+  const list = document.getElementById('player-list');
+  if (s.players.length === 0) {
+    list.innerHTML = '<em style="color:#604030;font-size:14px">Aucun joueur</em>';
+    return;
+  }
+  const dirSymbols = { up: '↑', down: '↓', left: '←', right: '→' };
+  list.innerHTML = s.players.map(p => `
+    <div class="player-row">
+      <span class="player-input">${p.lastInput ? dirSymbols[p.lastInput] : '·'}</span>
+      <span class="player-pseudo">${escHtml(p.pseudo)}</span>
+      <span class="player-status">${p.connected ? '🟢 connecté' : '🔴 déconnecté'}</span>
+      <button class="btn danger" style="padding:4px 10px;font-size:12px" onclick="kickPlayer('${p.id}')">Exclure</button>
+    </div>
+  `).join('');
+}
+
+function kickPlayer(id) {
+  if (confirm('Exclure ce joueur ?')) send('admin:kick', { playerId: id });
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Pac-Mage — Manette</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    background: #1a0e00;
+    color: #c8a96e;
+    font-family: 'Georgia', serif;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  /* ---- Pseudo screen ---- */
+  #pseudo-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 24px;
+    padding: 24px;
+  }
+  #pseudo-screen h1 {
+    font-size: 28px;
+    color: #e8c97e;
+    text-align: center;
+    letter-spacing: 2px;
+  }
+  #pseudo-screen p {
+    font-size: 14px;
+    color: #a07040;
+    text-align: center;
+  }
+  #pseudo-input {
+    width: 100%;
+    max-width: 320px;
+    padding: 12px 16px;
+    font-size: 20px;
+    background: #2a1500;
+    border: 2px solid #8b5e1a;
+    color: #e8c97e;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Georgia', serif;
+    outline: none;
+  }
+  #pseudo-input:focus { border-color: #e8c97e; }
+  #join-btn {
+    padding: 14px 40px;
+    font-size: 20px;
+    background: #8b5e1a;
+    color: #e8c97e;
+    border: 2px solid #c8a96e;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Georgia', serif;
+    letter-spacing: 2px;
+  }
+  #join-btn:active { background: #6b4a10; }
+  #join-error { color: #ff6644; font-size: 14px; }
+
+  /* ---- Controller screen ---- */
+  #controller-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 20px;
+  }
+  #ctrl-header {
+    text-align: center;
+  }
+  #ctrl-pseudo {
+    font-size: 20px;
+    color: #e8c97e;
+  }
+  #ctrl-mode {
+    font-size: 13px;
+    color: #a07040;
+    margin-top: 4px;
+  }
+  #ctrl-status {
+    font-size: 13px;
+    color: #806040;
+    margin-top: 4px;
+  }
+
+  /* D-pad */
+  #dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 96px);
+    grid-template-rows: repeat(3, 96px);
+    gap: 6px;
+  }
+  .dpad-btn {
+    width: 96px;
+    height: 96px;
+    background: linear-gradient(180deg, #4a2800 0%, #2a1500 100%);
+    border: 3px solid #8b5e1a;
+    border-radius: 12px;
+    color: #e8c97e;
+    font-size: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.1s, transform 0.1s;
+  }
+  .dpad-btn:active, .dpad-btn.pressed {
+    background: linear-gradient(180deg, #8b5e1a 0%, #6b4a10 100%);
+    transform: scale(0.92);
+    border-color: #e8c97e;
+  }
+  .dpad-empty { visibility: hidden; }
+
+  #ctrl-footer {
+    font-size: 12px;
+    color: #604030;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Pseudo entry -->
+<div id="pseudo-screen">
+  <h1>La Carte Ensorcelée</h1>
+  <p>Entrez votre nom de sorcier</p>
+  <input id="pseudo-input" type="text" maxlength="20" placeholder="Votre pseudo…" autocomplete="off" autocorrect="off" spellcheck="false" />
+  <button id="join-btn">Rejoindre</button>
+  <div id="join-error"></div>
+</div>
+
+<!-- Controller -->
+<div id="controller-screen">
+  <div id="ctrl-header">
+    <div id="ctrl-pseudo"></div>
+    <div id="ctrl-mode"></div>
+    <div id="ctrl-status"></div>
+  </div>
+
+  <div id="dpad">
+    <div class="dpad-empty"></div>
+    <div class="dpad-btn" id="btn-up" data-dir="up">↑</div>
+    <div class="dpad-empty"></div>
+    <div class="dpad-btn" id="btn-left" data-dir="left">←</div>
+    <div class="dpad-empty"></div>
+    <div class="dpad-btn" id="btn-right" data-dir="right">→</div>
+    <div class="dpad-empty"></div>
+    <div class="dpad-btn" id="btn-down" data-dir="down">↓</div>
+    <div class="dpad-empty"></div>
+  </div>
+
+  <div id="ctrl-footer">Pac-Mage — Contrôlez le Vagabond ensemble !</div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const TOKEN_KEY = 'pacmage_token';
+const PSEUDO_KEY = 'pacmage_pseudo';
+
+const socket = io({ reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000 });
+
+let myId = null;
+let myToken = localStorage.getItem(TOKEN_KEY);
+let myPseudo = localStorage.getItem(PSEUDO_KEY);
+let joined = false;
+
+// Try to reconnect if we have a token
+socket.on('connect', () => {
+  if (myToken && !joined) {
+    socket.emit('player:reconnect', { token: myToken });
+  }
+});
+
+socket.on('player:welcome', (data) => {
+  myId = data.id;
+  myToken = data.token || myToken;
+  if (myToken) localStorage.setItem(TOKEN_KEY, myToken);
+  joined = true;
+  showController();
+});
+
+socket.on('state:update', (s) => {
+  if (!joined) return;
+  const modeLabels = { democracy: 'Mode Démocratie (vote)', chaos: 'Mode Chaos (file)' };
+  document.getElementById('ctrl-mode').textContent = modeLabels[s.mode] || s.mode;
+
+  const statusLabels = {
+    lobby: 'En attente…',
+    playing: 'En jeu !',
+    paused: 'En pause',
+    levelTransition: 'Niveau suivant…',
+    gameover: 'Game Over',
+    won: 'Victoire !'
+  };
+  document.getElementById('ctrl-status').textContent = statusLabels[s.status] || s.status;
+});
+
+// Join
+document.getElementById('join-btn').addEventListener('click', joinGame);
+document.getElementById('pseudo-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') joinGame();
+});
+
+function joinGame() {
+  const pseudo = document.getElementById('pseudo-input').value.trim();
+  const err = document.getElementById('join-error');
+  if (!pseudo) { err.textContent = 'Entrez un pseudo'; return; }
+  if (pseudo.length < 2) { err.textContent = 'Minimum 2 caractères'; return; }
+  err.textContent = '';
+  localStorage.setItem(PSEUDO_KEY, pseudo);
+  myPseudo = pseudo;
+  socket.emit('player:join', { pseudo });
+}
+
+function showController() {
+  document.getElementById('pseudo-screen').style.display = 'none';
+  document.getElementById('controller-screen').style.display = 'flex';
+  document.getElementById('ctrl-pseudo').textContent = `@${myPseudo || 'Sorcier'}`;
+}
+
+// D-pad
+document.querySelectorAll('.dpad-btn').forEach(btn => {
+  const dir = btn.dataset.dir;
+
+  function sendInput() {
+    socket.emit('player:input', { dir });
+    btn.classList.add('pressed');
+    if (navigator.vibrate) navigator.vibrate(30);
+    setTimeout(() => btn.classList.remove('pressed'), 150);
+  }
+
+  btn.addEventListener('touchstart', (e) => { e.preventDefault(); sendInput(); }, { passive: false });
+  btn.addEventListener('mousedown', sendInput);
+});
+
+// Auto-show controller if we had a token and reconnected
+if (myToken && myPseudo) {
+  // Will show after player:welcome, which happens after reconnect
+  // Pre-fill pseudo field just in case
+  document.getElementById('pseudo-input').value = myPseudo;
+}
+</script>
+</body>
+</html>
