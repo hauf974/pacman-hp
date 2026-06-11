@@ -82,29 +82,38 @@ export function buildVoteTally(inputs: TimedInput[], windowMs: number, now: numb
   return tally;
 }
 
-// Move avatar one step if possible; try queued direction first
-export function tickAvatar(state: GameState): { moved: boolean; newDir: Direction } {
-  const { avatar, activeMap } = state;
-
-  // Try queued direction first
-  if (avatar.queuedDir && canMove(activeMap, avatar.r, avatar.c, avatar.queuedDir)) {
-    const pos = moveEntity(activeMap, avatar.r, avatar.c, avatar.queuedDir);
-    avatar.r = pos.r;
-    avatar.c = pos.c;
-    avatar.dir = avatar.queuedDir;
-    avatar.queuedDir = null;
-    return { moved: true, newDir: avatar.dir };
+// Pure step computation — no side effects, fully testable
+export function computeAvatarStep(
+  map: MapData,
+  r: number,
+  c: number,
+  dir: Direction,
+  queuedDir: Direction | null,
+): { r: number; c: number; dir: Direction; queuedDir: Direction | null; turned: boolean } {
+  // Try queued direction first (Pac-Man: turn whenever intersection allows)
+  if (queuedDir && canMove(map, r, c, queuedDir)) {
+    const pos = moveEntity(map, r, c, queuedDir);
+    return { r: pos.r, c: pos.c, dir: queuedDir, queuedDir: null, turned: true };
   }
-
   // Continue in current direction
-  if (canMove(activeMap, avatar.r, avatar.c, avatar.dir)) {
-    const pos = moveEntity(activeMap, avatar.r, avatar.c, avatar.dir);
-    avatar.r = pos.r;
-    avatar.c = pos.c;
-    return { moved: true, newDir: avatar.dir };
+  if (canMove(map, r, c, dir)) {
+    const pos = moveEntity(map, r, c, dir);
+    return { r: pos.r, c: pos.c, dir, queuedDir, turned: false };
   }
+  // Blocked — keep queued intent for later
+  return { r, c, dir, queuedDir, turned: false };
+}
 
-  return { moved: false, newDir: avatar.dir };
+// Move avatar one step in the game state (mutates avatar in place)
+export function tickAvatar(state: GameState): { moved: boolean } {
+  const { avatar, activeMap } = state;
+  const result = computeAvatarStep(activeMap, avatar.r, avatar.c, avatar.dir, avatar.queuedDir);
+  const moved = result.r !== avatar.r || result.c !== avatar.c;
+  avatar.r = result.r;
+  avatar.c = result.c;
+  avatar.dir = result.dir;
+  avatar.queuedDir = result.queuedDir;
+  return { moved };
 }
 
 // Apply a direction input to avatar (queue it)

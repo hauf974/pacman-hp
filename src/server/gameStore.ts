@@ -302,8 +302,19 @@ class GameStore {
     this.state.mode = mode;
   }
 
-  setSettings(partial: Partial<GameSettings>) {
-    Object.assign(this.state.settings, partial);
+  setSettings(partial: Partial<GameSettings> & { objectiveMode?: 'room' | 'collect' }) {
+    const { objectiveMode, ...rest } = partial as Record<string, unknown>;
+    Object.assign(this.state.settings, rest);
+    if (objectiveMode !== undefined) {
+      this.state.objectiveMode = objectiveMode as 'room' | 'collect';
+    }
+    // Sync live entity speeds immediately
+    if (rest.avatarSpeed !== undefined) {
+      this.state.avatar.speed = rest.avatarSpeed as number;
+    }
+    if (rest.pursuerSpeed !== undefined) {
+      for (const p of this.state.pursuers) p.speed = rest.pursuerSpeed as number;
+    }
   }
 
   forceLevel(level: number) {
@@ -324,7 +335,7 @@ class GameStore {
       token,
     };
     this.onChatEvent?.({ type: 'join', pseudo, ts: Date.now() });
-    // Resume if paused
+    // Resume only if paused due to zero players (not an admin pause)
     if (s.status === 'paused') {
       s.status = 'playing';
     }
