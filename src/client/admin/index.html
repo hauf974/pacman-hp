@@ -244,6 +244,42 @@
   </div>
 
   <div class="control-row">
+    <label>Atmosphère</label>
+    <select id="set-atmosphere" onchange="sendSettings()">
+      <option value="parchemin">Parchemin (sépia, jour)</option>
+      <option value="chandelle">Chandelle (sombre, lueur)</option>
+      <option value="sortilege">Sortilège (nuit magique)</option>
+    </select>
+  </div>
+
+  <div class="control-row">
+    <label>Tempo</label>
+    <select id="set-tempo" onchange="sendSettings()">
+      <option value="anime">Animé (normal)</option>
+      <option value="posed">Posé (lent)</option>
+      <option value="frenetique">Frénétique (rapide)</option>
+    </select>
+  </div>
+
+  <div class="control-row">
+    <label>Police du titre</label>
+    <select id="set-title-font" onchange="sendSettings()">
+      <option value="UnifrakturCook">UnifrakturCook (gothique)</option>
+      <option value="Cinzel">Cinzel (romain classique)</option>
+      <option value="Uncial Antiqua">Uncial Antiqua (celtique)</option>
+      <option value="Georgia">Georgia (sans téléchargement)</option>
+    </select>
+  </div>
+
+  <div class="control-row">
+    <label>Traînées de pas</label>
+    <select id="set-footprints" onchange="sendSettings()">
+      <option value="false">Désactivées</option>
+      <option value="true">Activées (empreintes)</option>
+    </select>
+  </div>
+
+  <div class="control-row">
     <label>Forcer niveau précis</label>
     <select id="set-force-level">
       <option value="1">Niveau 1 — Rusard</option>
@@ -382,13 +418,17 @@ function sendMode() {
 
 function sendSettings() {
   send('admin:setSettings', {
-    voteWindowSec: parseFloat(document.getElementById('set-vote-window').value),
-    objectiveMode: document.getElementById('set-objective').value,
+    voteWindowSec:     parseFloat(document.getElementById('set-vote-window').value),
+    objectiveMode:     document.getElementById('set-objective').value,
     wandCountPerLevel: parseInt(document.getElementById('set-wands').value),
-    avatarSpeed: parseFloat(document.getElementById('set-avatar-speed').value),
-    pursuerSpeed: parseFloat(document.getElementById('set-pursuer-speed').value),
-    autoMove: document.getElementById('set-auto-move').value === 'true',
-    startingLevel: parseInt(document.getElementById('set-starting-level').value),
+    avatarSpeed:       parseFloat(document.getElementById('set-avatar-speed').value),
+    pursuerSpeed:      parseFloat(document.getElementById('set-pursuer-speed').value),
+    autoMove:          document.getElementById('set-auto-move').value === 'true',
+    startingLevel:     parseInt(document.getElementById('set-starting-level').value),
+    atmosphere:        document.getElementById('set-atmosphere').value,
+    tempo:             document.getElementById('set-tempo').value,
+    titleFont:         document.getElementById('set-title-font').value,
+    footprints:        document.getElementById('set-footprints').value === 'true',
   });
 }
 
@@ -429,6 +469,14 @@ function updateUI(s) {
     document.getElementById('set-auto-move').value = String(s.settings.autoMove);
   if (document.activeElement.id !== 'set-starting-level')
     document.getElementById('set-starting-level').value = s.settings.startingLevel;
+  if (document.activeElement.id !== 'set-atmosphere')
+    document.getElementById('set-atmosphere').value = s.settings.atmosphere || 'parchemin';
+  if (document.activeElement.id !== 'set-tempo')
+    document.getElementById('set-tempo').value = s.settings.tempo || 'anime';
+  if (document.activeElement.id !== 'set-title-font')
+    document.getElementById('set-title-font').value = s.settings.titleFont || 'UnifrakturCook';
+  if (document.activeElement.id !== 'set-footprints')
+    document.getElementById('set-footprints').value = String(s.settings.footprints || false);
 
   // Player list
   const list = document.getElementById('player-list');

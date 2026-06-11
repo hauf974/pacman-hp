@@ -4,218 +4,182 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>La Carte Ensorcelée</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=Cinzel:wght@700&family=Uncial+Antiqua&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
-    width: 100%;
-    height: 100%;
-  }
-  body {
-    background: #1a0e00;
-    color: #c8a96e;
-    font-family: 'Georgia', serif;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
+/* ── Atmosphere themes ──────────────────────────────────────────────────── */
+:root {
+  --bg:          #c9a850;
+  --bg-panel:    rgba(170,118,32,0.93);
+  --wall:        #6b4010;
+  --wall-hi:     #8b5a20;
+  --canvas-bg:   #c9a850;
+  --text:        #2a1200;
+  --text-dim:    #7b5020;
+  --text-bright: #1a0800;
+  --border:      #8b5e1a;
+  --accent:      #a07020;
+  --vote-bar:    #9b6820;
+  --join-color:  #50a050;
+  --leave-color: #a05050;
+}
+[data-atmo="chandelle"] {
+  --bg:          #120700;
+  --bg-panel:    rgba(18,7,0,0.96);
+  --wall:        #0a0400;
+  --wall-hi:     #2a1000;
+  --canvas-bg:   #100600;
+  --text:        #e8a030;
+  --text-dim:    #8b5010;
+  --text-bright: #ffc050;
+  --border:      #8b4010;
+  --accent:      #cc6020;
+  --vote-bar:    #a84010;
+  --join-color:  #60a840;
+  --leave-color: #c06040;
+}
+[data-atmo="sortilege"] {
+  --bg:          #090318;
+  --bg-panel:    rgba(8,2,22,0.96);
+  --wall:        #110030;
+  --wall-hi:     #2a0060;
+  --canvas-bg:   #070215;
+  --text:        #c080ff;
+  --text-dim:    #7040a0;
+  --text-bright: #e0a0ff;
+  --border:      #5020a0;
+  --accent:      #8040d0;
+  --vote-bar:    #6030b0;
+  --join-color:  #40c080;
+  --leave-color: #c040a0;
+}
 
-  /* ---- Title bar ---- */
-  #titlebar {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 6px 24px;
-    background: linear-gradient(180deg, #3d1f00 0%, #2a1200 100%);
-    border-bottom: 2px solid #8b5e1a;
-    height: 52px;
-    flex-shrink: 0;
-  }
-  #title-text {
-    font-size: 28px;
-    font-weight: bold;
-    letter-spacing: 3px;
-    color: #e8c97e;
-    flex: 1;
-  }
-  #lives {
-    display: flex;
-    gap: 6px;
-    font-size: 24px;
-  }
-  #wands-display {
-    font-size: 18px;
-    color: #c8a96e;
-    background: rgba(0,0,0,0.3);
-    padding: 2px 12px;
-    border-radius: 4px;
-    border: 1px solid #8b5e1a;
-  }
-  #level-display {
-    font-size: 18px;
-    color: #c8a96e;
-    background: rgba(0,0,0,0.3);
-    padding: 2px 12px;
-    border-radius: 4px;
-    border: 1px solid #8b5e1a;
-  }
+/* ── Reset / base ────────────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Georgia', serif;
+  width: 100vw; height: 100vh;
+  display: flex; flex-direction: column;
+}
 
-  /* ---- Main area ---- */
-  #main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
+/* ── Title bar ───────────────────────────────────────────────────────────── */
+#titlebar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 4px 18px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 100%);
+  border-bottom: 2px solid var(--border);
+  height: 50px; flex-shrink: 0;
+}
+#title-text {
+  font-family: 'UnifrakturCook', 'Georgia', serif;
+  font-size: 30px; color: var(--text-bright);
+  flex: 1; letter-spacing: 2px;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.35);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#lives { display: flex; gap: 3px; font-size: 20px; flex-shrink: 0; }
+#wands-display, #level-display {
+  font-size: 14px; color: var(--text);
+  background: rgba(0,0,0,0.20); padding: 2px 10px;
+  border-radius: 4px; border: 1px solid var(--border);
+  white-space: nowrap; flex-shrink: 0;
+}
 
-  /* ---- Left panel: QR + chat ---- */
-  #left-panel {
-    width: 240px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    background: rgba(20, 10, 0, 0.8);
-    border-right: 2px solid #5a3a0a;
-    padding: 12px;
-    gap: 10px;
-  }
-  #qr-block {
-    text-align: center;
-  }
-  #qr-title {
-    font-size: 13px;
-    font-weight: bold;
-    color: #e8c97e;
-    margin-bottom: 6px;
-    letter-spacing: 1px;
-  }
-  #qr-img {
-    width: 160px;
-    height: 160px;
-    border: 2px solid #8b5e1a;
-    background: white;
-  }
-  #qr-subtitle {
-    font-size: 10px;
-    color: #a07040;
-    margin-top: 6px;
-    line-height: 1.4;
-  }
-  #players-count {
-    font-size: 13px;
-    color: #e8c97e;
-    margin-top: 4px;
-  }
+/* ── Main area ───────────────────────────────────────────────────────────── */
+#main { display: flex; flex: 1; overflow: hidden; }
 
-  #chat-title {
-    font-size: 13px;
-    font-weight: bold;
-    color: #e8c97e;
-    letter-spacing: 1px;
-    border-top: 1px solid #5a3a0a;
-    padding-top: 8px;
-  }
-  #chat-list {
-    flex: 1;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 2px;
-  }
-  .chat-line {
-    font-size: 12px;
-    color: #b89060;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .chat-line .pseudo { color: #e8c97e; }
-  .chat-line .dir { color: #ff9944; }
-  .chat-line.join { color: #80c080; }
-  .chat-line.leave { color: #c08080; }
+/* ── Left panel ─────────────────────────────────────────────────────────── */
+#left-panel {
+  width: 200px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg-panel);
+  border-right: 2px solid var(--border);
+  padding: 10px; gap: 8px; overflow: hidden;
+}
+#qr-block { text-align: center; flex-shrink: 0; }
+#qr-title {
+  font-size: 12px; font-weight: bold;
+  color: var(--text-bright); margin-bottom: 4px; letter-spacing: 1px;
+}
+#qr-img {
+  width: 148px; height: 148px;
+  border: 2px solid var(--border); background: #fff;
+  display: block; margin: 0 auto;
+}
+#qr-subtitle {
+  font-size: 9px; color: var(--text-dim); margin-top: 3px; line-height: 1.4;
+}
+#players-count { font-size: 11px; color: var(--text-bright); margin-top: 3px; }
 
-  /* ---- Game zone (center) ---- */
-  #game-zone {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    background: #0d0700;
-  }
-  #game-canvas {
-    display: block;
-  }
+#chat-title {
+  font-size: 11px; font-weight: bold; color: var(--text-bright);
+  letter-spacing: 1px; border-top: 1px solid var(--border); padding-top: 5px;
+  flex-shrink: 0;
+}
+#chat-list {
+  flex: 1; overflow: hidden; display: flex;
+  flex-direction: column-reverse; gap: 1px;
+}
+.chat-line {
+  font-size: 10px; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.45;
+}
+.chat-line .pseudo { color: var(--text-bright); }
+.chat-line .dir    { color: var(--accent); font-weight: bold; }
+.chat-line.join    { color: var(--join-color); }
+.chat-line.leave   { color: var(--leave-color); }
 
-  /* ---- Right panel: votes ---- */
-  #right-panel {
-    width: 200px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    background: rgba(20, 10, 0, 0.8);
-    border-left: 2px solid #5a3a0a;
-    padding: 12px;
-    gap: 8px;
-  }
-  #vote-title {
-    font-size: 13px;
-    font-weight: bold;
-    color: #e8c97e;
-    letter-spacing: 1px;
-  }
-  .vote-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .vote-label { font-size: 18px; width: 24px; }
-  .vote-bar-container {
-    flex: 1;
-    height: 16px;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid #5a3a0a;
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .vote-bar { height: 100%; background: #8b5e1a; transition: width 0.3s; }
-  .vote-count { font-size: 13px; color: #c8a96e; width: 22px; text-align: right; }
-  #tours-count {
-    margin-top: 8px;
-    font-size: 12px;
-    color: #a07040;
-    border-top: 1px solid #5a3a0a;
-    padding-top: 8px;
-  }
+/* ── Game zone ───────────────────────────────────────────────────────────── */
+#game-zone {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  position: relative; background: var(--canvas-bg); overflow: hidden;
+}
+#game-canvas { display: block; image-rendering: pixelated; }
 
-  /* ---- Overlay states ---- */
-  #overlay {
-    display: none;
-    position: absolute;
-    inset: 0;
-    background: rgba(10, 5, 0, 0.85);
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 24px;
-    z-index: 10;
-  }
-  #overlay.visible { display: flex; }
-  #overlay-title {
-    font-size: 64px;
-    font-weight: bold;
-    color: #e8c97e;
-    text-align: center;
-    letter-spacing: 4px;
-  }
-  #overlay-sub {
-    font-size: 24px;
-    color: #c8a96e;
-    text-align: center;
-  }
+/* ── Overlay (lobby / pause / level / gameover / win) ───────────────────── */
+#overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.80);
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 18px; z-index: 10;
+}
+#overlay.visible { display: flex; }
+#overlay-title {
+  font-family: 'UnifrakturCook', 'Georgia', serif;
+  font-size: 58px; font-weight: bold; color: #e8c97e;
+  text-align: center; letter-spacing: 3px;
+  text-shadow: 0 0 24px rgba(232,200,120,0.55);
+}
+#overlay-sub { font-size: 20px; color: #c8a96e; text-align: center; }
+
+/* ── Right panel: votes ──────────────────────────────────────────────────── */
+#right-panel {
+  width: 174px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg-panel);
+  border-left: 2px solid var(--border);
+  padding: 10px; gap: 7px;
+}
+#vote-title { font-size: 11px; font-weight: bold; color: var(--text-bright); letter-spacing: 1px; }
+.vote-row { display: flex; align-items: center; gap: 5px; }
+.vote-label { font-size: 15px; width: 18px; text-align: center; color: var(--text); }
+.vote-bar-container {
+  flex: 1; height: 13px;
+  background: rgba(0,0,0,0.30); border: 1px solid var(--border); border-radius: 2px; overflow: hidden;
+}
+.vote-bar { height: 100%; background: var(--vote-bar); transition: width 0.28s ease; }
+.vote-count { font-size: 11px; color: var(--text); width: 18px; text-align: right; }
+#tours-count {
+  font-size: 10px; color: var(--text-dim);
+  border-top: 1px solid var(--border); padding-top: 6px; margin-top: 2px;
+}
 </style>
 </head>
-<body>
+<body id="screen-body" data-atmo="parchemin">
 
 <!-- Title bar -->
 <div id="titlebar">
@@ -225,21 +189,22 @@
   <div id="level-display">Étage 1</div>
 </div>
 
-<!-- Main -->
+<!-- Main layout -->
 <div id="main">
+
   <!-- Left: QR + chat -->
   <div id="left-panel">
     <div id="qr-block">
       <div id="qr-title">Rejoignez la quête</div>
-      <img id="qr-img" src="/qr.png" alt="QR" />
+      <img id="qr-img" src="/qr.png" alt="QR code" />
       <div id="qr-subtitle">Scannez le sceau pour aider nos amis à rejoindre la salle sur demande</div>
-      <div id="players-count">0 sorciers connectés</div>
+      <div id="players-count">0 sorcier connecté</div>
     </div>
     <div id="chat-title">Le Grand Chahut</div>
     <div id="chat-list"></div>
   </div>
 
-  <!-- Center: canvas -->
+  <!-- Center: canvas + overlay -->
   <div id="game-zone">
     <canvas id="game-canvas"></canvas>
     <div id="overlay">
@@ -253,17 +218,17 @@
     <div id="vote-title">Votes</div>
     <div class="vote-row">
       <span class="vote-label">↑</span>
-      <div class="vote-bar-container"><div class="vote-bar" id="bar-up" style="width:0%"></div></div>
+      <div class="vote-bar-container"><div class="vote-bar" id="bar-up"    style="width:0%"></div></div>
       <span class="vote-count" id="cnt-up">0</span>
     </div>
     <div class="vote-row">
       <span class="vote-label">↓</span>
-      <div class="vote-bar-container"><div class="vote-bar" id="bar-down" style="width:0%"></div></div>
+      <div class="vote-bar-container"><div class="vote-bar" id="bar-down"  style="width:0%"></div></div>
       <span class="vote-count" id="cnt-down">0</span>
     </div>
     <div class="vote-row">
       <span class="vote-label">←</span>
-      <div class="vote-bar-container"><div class="vote-bar" id="bar-left" style="width:0%"></div></div>
+      <div class="vote-bar-container"><div class="vote-bar" id="bar-left"  style="width:0%"></div></div>
       <span class="vote-count" id="cnt-left">0</span>
     </div>
     <div class="vote-row">
@@ -271,341 +236,560 @@
       <div class="vote-bar-container"><div class="vote-bar" id="bar-right" style="width:0%"></div></div>
       <span class="vote-count" id="cnt-right">0</span>
     </div>
-    <div id="tours-count">0 tours joués</div>
+    <div id="tours-count">0 tour joué</div>
   </div>
-</div>
+
+</div><!-- #main -->
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
+// ── Constants ─────────────────────────────────────────────────────────────
+const CHAT_MAX = 50;
 
-let state = null;
-const CHAT_MAX = 40;
-const chatLines = [];
+// Colour themes (canvas palette)
+const THEMES = {
+  parchemin: {
+    corridor: '#c9a850', wall: '#6b4010', wallHi: '#9b6428',
+    roomBg: '#1a5c18', roomBorder: '#38b030',
+    doorBase: '#30c030', doorArch: '#1a7010',
+    tunnelBg: 'rgba(80,30,140,{a})', tunnelBorder: 'rgba(180,80,255,{a})',
+    avatarFill: '#2a1400', avatarGlow: 'rgba(190,145,55,0.35)',
+    avatarMouth: '#c9a850',
+    footFill: 'rgba(42,20,0,{a})',
+    wandFill: '#c8900a', wandGlow: 'rgba(220,160,20,0.6)',
+    pursuerGlowMul: 0.22,
+  },
+  chandelle: {
+    corridor: '#0e0600', wall: '#0a0300', wallHi: '#2a1000',
+    roomBg: '#082808', roomBorder: '#208020',
+    doorBase: '#28b828', doorArch: '#104010',
+    tunnelBg: 'rgba(60,10,110,{a})', tunnelBorder: 'rgba(160,60,255,{a})',
+    avatarFill: '#e8a030', avatarGlow: 'rgba(232,160,48,0.5)',
+    avatarMouth: '#0e0600',
+    footFill: 'rgba(232,160,48,{a})',
+    wandFill: '#ffcc20', wandGlow: 'rgba(255,200,30,0.7)',
+    pursuerGlowMul: 0.38,
+  },
+  sortilege: {
+    corridor: '#09031a', wall: '#110030', wallHi: '#2a0070',
+    roomBg: '#0a1830', roomBorder: '#3050c0',
+    doorBase: '#40c870', doorArch: '#204830',
+    tunnelBg: 'rgba(100,0,180,{a})', tunnelBorder: 'rgba(200,80,255,{a})',
+    avatarFill: '#b060ff', avatarGlow: 'rgba(180,80,255,0.5)',
+    avatarMouth: '#09031a',
+    footFill: 'rgba(180,100,255,{a})',
+    wandFill: '#a040ff', wandGlow: 'rgba(160,80,255,0.7)',
+    pursuerGlowMul: 0.38,
+  },
+};
 
-function computeCellSize(mapW, mapH) {
-  const gameZone = document.getElementById('game-zone');
-  const availW = gameZone.clientWidth - 8;
-  const availH = gameZone.clientHeight - 8;
-  return Math.floor(Math.min(availW / mapW, availH / mapH));
+const PURSUER_COLORS = {
+  rusard:      '#d46010', // Filch — amber brown
+  missteigne:  '#c040a0', // Mrs Norris — purple-rose
+  rogue:       '#2040b0', // Snape — deep blue
+  peeves:      '#18c018', // Peeves — bright green
+  baronsanglant: '#c0c0c0', // Bloody Baron — silver
+};
+
+const PURSUER_GLOW = {
+  rusard: '#ff8040', missteigne: '#ff80d0', rogue: '#8090ff',
+  peeves: '#80ff80', baronsanglant: '#e0e0ff',
+};
+
+const DIR_ANGLE = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+
+function rgba(template, a) { return template.replace('{a}', a); }
+
+// ── Footprint trail ──────────────────────────────────────────────────────
+const TRAIL_MAX = 14;
+const trail = {}; // id → [{r, c, dir}]
+
+function recordTrail(id, r, c, dir) {
+  if (!trail[id]) trail[id] = [];
+  const t = trail[id];
+  const last = t[t.length - 1];
+  if (last && last.r === r && last.c === c) return; // didn't move
+  t.push({ r, c, dir });
+  if (t.length > TRAIL_MAX) t.shift();
 }
 
-const pursuerColors = {
-  rusard: '#ff6644',
-  missteigne: '#ff44aa',
-  rogue: '#6644ff',
-  peeves: '#44ffff',
-  baronsanglant: '#cccccc',
-};
-const pursuerInitials = {
-  rusard: 'R', missteigne: 'M', rogue: 'S', peeves: 'P', baronsanglant: 'B',
-};
-const dirAngles = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+function pruneTrails(activeIds) {
+  const s = new Set(activeIds);
+  for (const k of Object.keys(trail)) if (!s.has(k)) delete trail[k];
+}
 
-let lastCellSize = 0;
+// ── Cell helpers ─────────────────────────────────────────────────────────
+let state = null;
+const chatLines = [];
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+let lastCell = 0;
 
-function render() {
-  if (!state) return;
-  const { mapCells, mapWidth, mapHeight, avatar, pursuers, wands, status } = state;
+function cellSize(mapW, mapH) {
+  const gz = document.getElementById('game-zone');
+  return Math.floor(Math.min(gz.clientWidth / mapW, gz.clientHeight / mapH));
+}
 
-  const cell = computeCellSize(mapWidth, mapHeight);
-  if (cell !== lastCellSize) {
-    canvas.width = mapWidth * cell;
-    canvas.height = mapHeight * cell;
-    lastCellSize = cell;
+function dirDelta(dir) {
+  switch (dir) {
+    case 'up':    return { dr: -1, dc:  0 };
+    case 'down':  return { dr:  1, dc:  0 };
+    case 'left':  return { dr:  0, dc: -1 };
+    case 'right': return { dr:  0, dc:  1 };
+    default:      return { dr:  0, dc:  0 };
   }
-  const w = canvas.width;
-  const h = canvas.height;
+}
 
-  // Background
-  ctx.fillStyle = '#0d0700';
-  ctx.fillRect(0, 0, w, h);
-
-  // Determine if room is accessible (for glow)
-  const roomAccessible = state.objectiveMode === 'room' ||
-    (state.objectiveMode === 'collect' && state.wandCollected >= state.wandTotal);
-  const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 400);
-
-  // Draw cells
-  const tunnelH = new Set(state.mapTunnels.horizontal);
-  const tunnelV = new Set(state.mapTunnels.vertical);
-  const door = state.mapRoomDoor;
-
-  for (let r = 0; r < mapHeight; r++) {
-    for (let c = 0; c < mapWidth; c++) {
-      const cv = mapCells[r][c];
-      const x = c * cell;
-      const y = r * cell;
-
-      // Tunnel opening cells on the border: draw with a distinct purple tint
-      const isBorderCell = (r === 0 || r === mapHeight - 1 || c === 0 || c === mapWidth - 1);
-      const isTunnelCell = isBorderCell &&
-        ((tunnelH.has(r) && (c === 0 || c === mapWidth - 1)) ||
-         (tunnelV.has(c) && (r === 0 || r === mapHeight - 1)));
-
-      if (cv === 1 && !isTunnelCell) {
-        ctx.fillStyle = '#3d2200';
-        ctx.fillRect(x, y, cell, cell);
-        ctx.strokeStyle = '#5a3510';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
-      } else if (cv === 2) {
-        // Room cell — pulse green glow when accessible
-        const gIntensity = roomAccessible ? Math.floor(30 + pulse * 40) : 30;
-        ctx.fillStyle = `rgb(10,${gIntensity + 30},10)`;
-        ctx.fillRect(x, y, cell, cell);
-        const borderAlpha = roomAccessible ? (0.5 + pulse * 0.5).toFixed(2) : '0.4';
-        ctx.strokeStyle = `rgba(60,200,60,${borderAlpha})`;
-        ctx.lineWidth = roomAccessible ? 2 : 1;
-        ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
-      } else if (isTunnelCell) {
-        // Tunnel exit: purple corridor
-        const tp = 0.4 + 0.6 * Math.sin(Date.now() / 600);
-        ctx.fillStyle = `rgba(80,20,120,${0.6 + tp * 0.3})`;
-        ctx.fillRect(x, y, cell, cell);
-        ctx.strokeStyle = `rgba(180,80,255,${0.6 + tp * 0.4})`;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x + 1, y + 1, cell - 2, cell - 2);
-        // Draw directional arrow
-        const isLeft = c === 0;
-        const isRight = c === mapWidth - 1;
-        const isTop = r === 0;
-        const isBot = r === mapHeight - 1;
-        ctx.fillStyle = `rgba(220,120,255,${0.7 + tp * 0.3})`;
-        ctx.font = `bold ${Math.max(8, Math.round(cell * 0.55))}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const arrow = isLeft ? '←' : isRight ? '→' : isTop ? '↑' : '↓';
-        ctx.fillText(arrow, x + cell / 2, y + cell / 2);
-      }
-      // type 0/3/4 = corridor (dark bg), nothing drawn
-    }
+function perp(dir) { // unit perpendicular (for foot offsets)
+  switch (dir) {
+    case 'up': case 'down': return { dr: 0, dc: 1 };
+    default: return { dr: 1, dc: 0 };
   }
+}
 
-  // Door cell: draw a gate/arch indicator
-  if (door) {
-    const dx = door.c * cell;
-    const dy = door.r * cell;
-    const tp = 0.5 + 0.5 * Math.sin(Date.now() / 500);
-    const doorAlpha = roomAccessible ? (0.6 + tp * 0.4).toFixed(2) : '0.5';
-    ctx.fillStyle = `rgba(60,180,60,${doorAlpha})`;
-    ctx.fillRect(dx + cell * 0.1, dy + cell * 0.6, cell * 0.8, cell * 0.35);
-    // Arch
-    ctx.beginPath();
-    ctx.arc(dx + cell / 2, dy + cell * 0.6, cell * 0.4, Math.PI, 0);
-    ctx.fillStyle = `rgba(30,120,30,${doorAlpha})`;
-    ctx.fill();
-    ctx.strokeStyle = `rgba(100,255,100,${doorAlpha})`;
-    ctx.lineWidth = Math.max(1, cell * 0.08);
-    ctx.stroke();
-  }
-
-  // Draw wands
-  for (const wand of state.wands) {
-    if (!wand.collected) {
-      const x = wand.c * cell + cell / 2;
-      const y = wand.r * cell + cell / 2;
-      const glow = 0.4 + 0.6 * Math.sin(Date.now() / 300 + wand.c);
-      ctx.shadowColor = '#ffaa00';
-      ctx.shadowBlur = cell * 0.4 * glow;
-      ctx.fillStyle = '#ffdd44';
+// ── Draw: footprints ─────────────────────────────────────────────────────
+function drawTrails(cell, theme, footprintsOn) {
+  if (!footprintsOn) return;
+  for (const [id, steps] of Object.entries(trail)) {
+    const isAvatar = id === 'avatar';
+    const pType = isAvatar ? null : (state.pursuers.find(p => p.id === id)?.type);
+    const col = isAvatar ? theme.footFill : `rgba(${hexToRgb(PURSUER_COLORS[pType] || '#888')},{a})`;
+    const n = steps.length;
+    for (let i = 0; i < n - 1; i++) {
+      const { r, c, dir } = steps[i];
+      const alpha = ((i + 1) / n) * 0.35;
+      const px = c * cell + cell / 2;
+      const py = r * cell + cell / 2;
+      const { dr: pr, dc: pc } = perp(dir);
+      const off = cell * 0.18;
+      const fs = Math.max(1, cell * 0.1);
+      // left foot (step index even = left, odd = right)
+      const side = (i % 2 === 0) ? 1 : -1;
+      ctx.fillStyle = rgba(col, alpha);
       ctx.beginPath();
-      ctx.arc(x, y, cell * 0.18, 0, Math.PI * 2);
+      ctx.ellipse(px + pc * off * side, py + pr * off * side, fs * 1.5, fs, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
     }
   }
+}
 
-  // Draw pursuers
-  for (const p of pursuers) {
-    const x = p.c * cell + cell / 2;
-    const y = p.r * cell + cell / 2;
-    const color = pursuerColors[p.type] || '#ff4444';
-    const r = cell * 0.38;
-
-    // Shadow
-    ctx.shadowColor = color;
-    ctx.shadowBlur = cell * 0.3;
-
-    // Body
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y - cell * 0.04, r, Math.PI, 0);
-    // Wavy bottom (ghost skirt)
-    const waves = 3;
-    for (let i = 0; i < waves; i++) {
-      const wx = x - r + (r * 2 / waves) * (i + 0.5);
-      const dir = i % 2 === 0 ? 1 : -1;
-      ctx.arc(wx, y + r * 0.6, r / waves, 0, Math.PI, dir === -1);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Eyes
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(x - r * 0.32, y - r * 0.2, r * 0.26, 0, Math.PI * 2);
-    ctx.arc(x + r * 0.32, y - r * 0.2, r * 0.26, 0, Math.PI * 2);
-    ctx.fill();
-    // Pupils
-    const pdx = (dirDelta(p.dir) || { dc: 0 }).dc * r * 0.1;
-    const pdy = (dirDelta(p.dir) || { dr: 0 }).dr * r * 0.1;
-    ctx.fillStyle = '#2244cc';
-    ctx.beginPath();
-    ctx.arc(x - r * 0.32 + pdx, y - r * 0.2 + pdy, r * 0.13, 0, Math.PI * 2);
-    ctx.arc(x + r * 0.32 + pdx, y - r * 0.2 + pdy, r * 0.13, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Initial label (visible at larger cell sizes)
-    if (cell >= 24) {
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      ctx.font = `bold ${Math.round(cell * 0.28)}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(pursuerInitials[p.type] || '?', x, y + r * 0.45);
-    }
-  }
-
-  // Draw avatar (Pac-Man)
-  const ax = avatar.c * cell + cell / 2;
-  const ay = avatar.r * cell + cell / 2;
-  const angle = dirAngles[avatar.dir] ?? 0;
-  const mouthAngle = 0.28;
-
-  ctx.shadowColor = '#ffe066';
-  ctx.shadowBlur = cell * 0.4;
-  ctx.fillStyle = '#ffe066';
+// ── Draw: wand collectible ────────────────────────────────────────────────
+function drawWand(x, y, cell, theme) {
+  const t = Date.now();
+  const glow = 0.55 + 0.45 * Math.sin(t / 280 + x);
+  const r = cell * 0.14;
+  ctx.shadowColor = theme.wandGlow.replace('0.6', String((0.4 + 0.6 * glow).toFixed(2)));
+  ctx.shadowBlur = cell * 0.5 * glow;
+  // Star burst
+  ctx.fillStyle = theme.wandFill;
+  const pts = 5;
   ctx.beginPath();
-  ctx.arc(ax, ay, cell * 0.42, angle + mouthAngle, angle + Math.PI * 2 - mouthAngle);
-  ctx.lineTo(ax, ay);
+  for (let i = 0; i < pts * 2; i++) {
+    const a = (i * Math.PI / pts) - Math.PI / 2;
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    const nx = x + Math.cos(a) * rr;
+    const ny = y + Math.sin(a) * rr;
+    i === 0 ? ctx.moveTo(nx, ny) : ctx.lineTo(nx, ny);
+  }
+  ctx.closePath();
   ctx.fill();
+  // Wand stick
+  const angle = Math.PI / 4;
+  ctx.strokeStyle = theme.wandFill;
+  ctx.lineWidth = Math.max(1, cell * 0.07);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + Math.cos(angle + Math.PI) * cell * 0.32, y + Math.sin(angle + Math.PI) * cell * 0.32);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+// ── Draw: door arch ───────────────────────────────────────────────────────
+function drawDoor(dx, dy, cell, theme, accessible) {
+  const t = Date.now();
+  const pulse = 0.5 + 0.5 * Math.sin(t / 450);
+  const a = accessible ? (0.65 + pulse * 0.35).toFixed(2) : '0.45';
+  // Arch body
+  ctx.fillStyle = `rgba(40,180,40,${a})`;
+  ctx.beginPath();
+  ctx.arc(dx + cell / 2, dy + cell * 0.55, cell * 0.38, Math.PI, 0);
+  ctx.lineTo(dx + cell * 0.88, dy + cell * 0.88);
+  ctx.lineTo(dx + cell * 0.12, dy + cell * 0.88);
+  ctx.closePath();
+  ctx.fill();
+  // Arch outline
+  ctx.strokeStyle = `rgba(100,255,100,${a})`;
+  ctx.lineWidth = Math.max(1, cell * 0.09);
+  ctx.stroke();
+}
+
+// ── Draw: pursuer ─────────────────────────────────────────────────────────
+function drawPursuer(p, cell, theme) {
+  const x = p.c * cell + cell / 2;
+  const y = p.r * cell + cell / 2;
+  const color = PURSUER_COLORS[p.type] || '#ff4444';
+  const glow  = PURSUER_GLOW[p.type]  || '#ff8888';
+  const r = cell * 0.40;
+  const t = Date.now();
+
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = cell * (0.25 + theme.pursuerGlowMul * (0.5 + 0.5 * Math.sin(t / 500 + p.c)));
+
+  // Ghost body
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y - cell * 0.04, r, Math.PI, 0);
+  // Wavy skirt
+  const waves = 3;
+  const skirtY = y + r * 0.55;
+  for (let i = 0; i < waves; i++) {
+    const wx = x - r + (r * 2 / waves) * (i + 0.5);
+    ctx.arc(wx, skirtY, r / waves, 0, Math.PI, i % 2 !== 0);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Distinctive top feature per character (drawn OVER the body)
+  drawPursuerTop(p.type, x, y, r, color, cell, t);
+
+  ctx.shadowBlur = 0;
+
+  // Eyes
+  const ey = y - r * 0.18;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(x - r * 0.30, ey, r * 0.24, 0, Math.PI * 2);
+  ctx.arc(x + r * 0.30, ey, r * 0.24, 0, Math.PI * 2);
+  ctx.fill();
+  // Pupils (track movement direction)
+  const { dc, dr } = dirDelta(p.dir);
+  const poff = r * 0.09;
+  ctx.fillStyle = (p.type === 'peeves') ? '#ff0000' : '#2244cc';
+  ctx.beginPath();
+  ctx.arc(x - r * 0.30 + dc * poff, ey + dr * poff, r * 0.12, 0, Math.PI * 2);
+  ctx.arc(x + r * 0.30 + dc * poff, ey + dr * poff, r * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPursuerTop(type, x, y, r, color, cell, t) {
+  switch (type) {
+    case 'rusard': {
+      // Cat ears (Filch with Mrs Norris)
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.55, y - r * 0.85);
+      ctx.lineTo(x - r * 0.25, y - r * 1.30);
+      ctx.lineTo(x + r * 0.05, y - r * 0.85);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + r * 0.05, y - r * 0.85);
+      ctx.lineTo(x + r * 0.35, y - r * 1.30);
+      ctx.lineTo(x + r * 0.65, y - r * 0.85);
+      ctx.fill();
+      // Inner ear
+      ctx.fillStyle = '#ff9060';
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.48, y - r * 0.88);
+      ctx.lineTo(x - r * 0.25, y - r * 1.18);
+      ctx.lineTo(x - r * 0.02, y - r * 0.88);
+      ctx.fill();
+      break;
+    }
+    case 'missteigne': {
+      // Pointed witch-hat brim (tiny)
+      ctx.fillStyle = color;
+      const hx = x, hy = y - r;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy - r * 0.85);
+      ctx.lineTo(hx - r * 0.42, hy);
+      ctx.lineTo(hx + r * 0.42, hy);
+      ctx.closePath();
+      ctx.fill();
+      // Brim line
+      ctx.fillStyle = '#e080c0';
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, r * 0.5, r * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'rogue': {
+      // Tall angular hood (Snape's pointed look)
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.38, y - r * 0.88);
+      ctx.lineTo(x, y - r * 1.50);
+      ctx.lineTo(x + r * 0.38, y - r * 0.88);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'peeves': {
+      // Jester bumps — two little spheres
+      const bumpT = 0.5 + 0.5 * Math.sin(t / 200);
+      ctx.fillStyle = '#20e020';
+      ctx.beginPath();
+      ctx.arc(x - r * 0.30, y - r * 0.95 - bumpT * r * 0.12, r * 0.20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + r * 0.30, y - r * 0.95 - bumpT * r * 0.12, r * 0.20, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'baronsanglant': {
+      // Crown spikes (Bloody Baron)
+      ctx.fillStyle = '#d8d8d8';
+      ctx.lineWidth = Math.max(1, cell * 0.05);
+      ctx.strokeStyle = '#909090';
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x + i * r * 0.40 - r * 0.12, y - r * 0.88);
+        ctx.lineTo(x + i * r * 0.40, y - r * 1.30);
+        ctx.lineTo(x + i * r * 0.40 + r * 0.12, y - r * 0.88);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      // Chains: small dots along sides
+      ctx.fillStyle = 'rgba(180,180,200,0.7)';
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(x + r * 0.55, y - r * 0.2 + i * r * 0.35, r * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+  }
+}
+
+// ── Draw: avatar (Le Vagabond) ────────────────────────────────────────────
+function drawAvatar(avatar, cell, theme) {
+  const x = avatar.c * cell + cell / 2;
+  const y = avatar.r * cell + cell / 2;
+  const angle = DIR_ANGLE[avatar.dir] ?? 0;
+  const t = Date.now();
+  // Animated mouth: full open → closed → full open (tempo-scaled)
+  const mouthAnim = 0.25 + 0.20 * Math.abs(Math.sin(t / 90));
+
+  ctx.shadowColor = theme.avatarGlow;
+  ctx.shadowBlur = cell * 0.5;
+
+  ctx.fillStyle = theme.avatarFill;
+  ctx.beginPath();
+  ctx.arc(x, y, cell * 0.42, angle + mouthAnim, angle + Math.PI * 2 - mouthAnim);
+  ctx.lineTo(x, y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Highlight ring (thin lighter arc at top)
+  ctx.strokeStyle = theme.avatarGlow.replace('0.35', '0.5');
+  ctx.lineWidth = Math.max(1, cell * 0.06);
+  ctx.beginPath();
+  ctx.arc(x, y, cell * 0.42, angle + mouthAnim, angle + Math.PI * 2 - mouthAnim);
+  ctx.stroke();
+
   ctx.shadowBlur = 0;
 
   // Eye
-  const eyeAngle = angle - Math.PI / 4;
-  ctx.fillStyle = '#1a0e00';
+  const eyeA = angle - Math.PI / 4;
+  ctx.fillStyle = theme.avatarMouth;
   ctx.beginPath();
   ctx.arc(
-    ax + Math.cos(eyeAngle) * cell * 0.2,
-    ay + Math.sin(eyeAngle) * cell * 0.2,
+    x + Math.cos(eyeA) * cell * 0.20,
+    y + Math.sin(eyeA) * cell * 0.20,
     cell * 0.07, 0, Math.PI * 2,
   );
   ctx.fill();
 
-  // Queued direction indicator (small arrow)
+  // Queued direction hint: small pulsing dot ahead
   if (avatar.queuedDir) {
-    const qAngle = dirAngles[avatar.queuedDir] ?? 0;
-    const arrowDist = cell * 0.7;
-    ctx.fillStyle = 'rgba(255,220,100,0.6)';
-    ctx.font = `${Math.round(cell * 0.3)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const symbols = { right: '›', left: '‹', up: '›', down: '›' };
-    // Just draw a small dot in the queued direction
+    const qa = DIR_ANGLE[avatar.queuedDir] ?? 0;
+    const qp = 0.45 + 0.45 * Math.sin(t / 180);
+    ctx.fillStyle = `rgba(${hexToRgb(theme.avatarFill)},${qp.toFixed(2)})`;
     ctx.beginPath();
     ctx.arc(
-      ax + Math.cos(qAngle) * arrowDist,
-      ay + Math.sin(qAngle) * arrowDist,
-      cell * 0.1, 0, Math.PI * 2,
+      x + Math.cos(qa) * cell * 0.75,
+      y + Math.sin(qa) * cell * 0.75,
+      cell * 0.10, 0, Math.PI * 2,
     );
     ctx.fill();
   }
-
-  updateOverlay(status);
 }
 
-// Helper exposed in render scope — reuse from engine logic mirror
-function dirDelta(dir) {
-  switch (dir) {
-    case 'up': return { dr: -1, dc: 0 };
-    case 'down': return { dr: 1, dc: 0 };
-    case 'left': return { dr: 0, dc: -1 };
-    case 'right': return { dr: 0, dc: 1 };
-    default: return { dr: 0, dc: 0 };
+// ── Main render ───────────────────────────────────────────────────────────
+function render() {
+  if (!state) return;
+  const s = state;
+  const W = s.mapWidth, H = s.mapHeight;
+  const cell = cellSize(W, H);
+  if (cell < 1) return;
+  if (cell !== lastCell) {
+    canvas.width  = W * cell;
+    canvas.height = H * cell;
+    lastCell = cell;
   }
-}
 
-function updateOverlay(status) {
-  const overlay = document.getElementById('overlay');
-  const title = document.getElementById('overlay-title');
-  const sub = document.getElementById('overlay-sub');
-  if (status === 'lobby') {
-    overlay.classList.add('visible');
-    title.textContent = 'En attente…';
-    sub.textContent = 'L\'animateur lancera la partie';
-  } else if (status === 'paused') {
-    overlay.classList.add('visible');
-    title.textContent = 'Pause';
-    sub.textContent = 'En attente de joueurs…';
-  } else if (status === 'levelTransition') {
-    overlay.classList.add('visible');
-    title.textContent = 'Salle sur Demande !';
-    sub.textContent = 'Niveau suivant…';
-  } else if (status === 'gameover') {
-    overlay.classList.add('visible');
-    title.textContent = 'Game Over';
-    sub.textContent = 'L\'animateur peut relancer';
-  } else if (status === 'won') {
-    overlay.classList.add('visible');
-    title.textContent = 'L\'Armée de Dumbledore vaincra !';
-    sub.textContent = '🎉 Victoire ! 🎉';
-  } else {
-    overlay.classList.remove('visible');
+  const atmo = (s.settings?.atmosphere) || 'parchemin';
+  const theme = THEMES[atmo] || THEMES.parchemin;
+  const tunnelH = new Set(s.mapTunnels.horizontal);
+  const tunnelV = new Set(s.mapTunnels.vertical);
+  const door = s.mapRoomDoor;
+  const roomAccessible = s.objectiveMode === 'room' ||
+    (s.objectiveMode === 'collect' && s.wandCollected >= s.wandTotal);
+  const t = Date.now();
+
+  // ① Fill entire canvas with corridor/parchment colour
+  ctx.fillStyle = theme.corridor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // ② Draw cells — only walls, room, tunnels (corridors show through)
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c < W; c++) {
+      const v = s.mapCells[r][c];
+      const px = c * cell, py = r * cell;
+      const border = (r === 0 || r === H - 1 || c === 0 || c === W - 1);
+      const isTunH  = border && tunnelH.has(r) && (c === 0 || c === W - 1);
+      const isTunV  = border && tunnelV.has(c) && (r === 0 || r === H - 1);
+      const isTun   = isTunH || isTunV;
+
+      if (v === 1 && !isTun) {
+        // Wall
+        ctx.fillStyle = theme.wall;
+        ctx.fillRect(px, py, cell, cell);
+        // Inner highlight edge (gives depth/ink look)
+        ctx.strokeStyle = theme.wallHi;
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(px + 1, py + 1, cell - 2, cell - 2);
+
+      } else if (v === 2) {
+        // Room
+        const gI = roomAccessible ? Math.floor(30 + (0.5 + 0.5 * Math.sin(t / 380)) * 35) : 20;
+        ctx.fillStyle = theme.roomBg;
+        ctx.fillRect(px, py, cell, cell);
+        const ra = roomAccessible ? (0.55 + 0.45 * Math.sin(t / 380)).toFixed(2) : '0.35';
+        ctx.strokeStyle = `rgba(${hexToRgb(theme.roomBorder)},${ra})`;
+        ctx.lineWidth = roomAccessible ? 1.5 : 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, cell - 1, cell - 1);
+
+      } else if (isTun) {
+        // Tunnel opening: purple (parchemin) or themed colour
+        const tp = 0.5 + 0.5 * Math.sin(t / 550);
+        ctx.fillStyle = rgba(theme.tunnelBg, (0.55 + tp * 0.25).toFixed(2));
+        ctx.fillRect(px, py, cell, cell);
+        ctx.strokeStyle = rgba(theme.tunnelBorder, (0.6 + tp * 0.35).toFixed(2));
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(px + 1, py + 1, cell - 2, cell - 2);
+        // Directional arrow
+        const arrow = isTunH ? (c === 0 ? '←' : '→') : (r === 0 ? '↑' : '↓');
+        ctx.fillStyle = rgba(theme.tunnelBorder, (0.8 + tp * 0.2).toFixed(2));
+        ctx.font = `bold ${Math.max(6, Math.round(cell * 0.52))}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(arrow, px + cell / 2, py + cell / 2);
+      }
+      // v === 0/3/4: corridor — parchment background already drawn
+    }
   }
+
+  // ③ Door arch (above room)
+  if (door) {
+    drawDoor(door.c * cell, door.r * cell, cell, theme, roomAccessible);
+  }
+
+  // ④ Footprint trails
+  drawTrails(cell, theme, s.settings?.footprints);
+
+  // ⑤ Wands
+  for (const w of s.wands) {
+    if (!w.collected) drawWand(w.c * cell + cell / 2, w.r * cell + cell / 2, cell, theme);
+  }
+
+  // ⑥ Pursuers
+  for (const p of s.pursuers) drawPursuer(p, cell, theme);
+
+  // ⑦ Avatar
+  drawAvatar(s.avatar, cell, theme);
+
+  // ⑧ Overlay
+  updateOverlay(s.status);
 }
 
+// ── HUD ───────────────────────────────────────────────────────────────────
 function updateHUD(s) {
+  // Atmosphere + font
+  const atmo = s.settings?.atmosphere || 'parchemin';
+  document.getElementById('screen-body').dataset.atmo = atmo;
+  const font = s.settings?.titleFont || 'UnifrakturCook';
+  document.getElementById('title-text').style.fontFamily = `'${font}', 'Georgia', serif`;
+
   // Lives
   const livesEl = document.getElementById('lives');
-  livesEl.textContent = '❤'.repeat(s.lives) + '🖤'.repeat(Math.max(0, 3 - s.lives));
+  const maxLives = 3;
+  const hearts = s.lives > 0 ? '❤'.repeat(s.lives) + '🖤'.repeat(Math.max(0, maxLives - s.lives)) : '💀';
+  livesEl.textContent = hearts;
 
-  // Level
-  document.getElementById('level-display').textContent = `Étage ${s.level}`;
-
-  // Wands
+  // Wands counter
   const wandsEl = document.getElementById('wands-display');
   if (s.objectiveMode === 'collect' && s.wandTotal > 0) {
     wandsEl.style.display = '';
-    wandsEl.textContent = `Baguettes ${s.wandCollected}/${s.wandTotal}`;
+    wandsEl.textContent = `🪄 ${s.wandCollected}/${s.wandTotal}`;
   } else {
     wandsEl.style.display = 'none';
   }
 
+  // Level
+  document.getElementById('level-display').textContent = `Étage ${s.level}`;
+
   // Players count
-  const connected = s.players.filter(p => p.connected).length;
-  document.getElementById('players-count').textContent = `${connected} sorcier${connected !== 1 ? 's' : ''} connecté${connected !== 1 ? 's' : ''}`;
+  const n = s.players.filter(p => p.connected).length;
+  document.getElementById('players-count').textContent =
+    `${n} sorcier${n > 1 ? 's' : ''} connecté${n > 1 ? 's' : ''}`;
 
   // Vote bars
   const tally = s.voteTally;
-  const total = Math.max(1, tally.up + tally.down + tally.left + tally.right);
-  ['up','down','left','right'].forEach(dir => {
-    const pct = (tally[dir] / total * 100).toFixed(1);
-    document.getElementById(`bar-${dir}`).style.width = pct + '%';
-    document.getElementById(`cnt-${dir}`).textContent = tally[dir];
-  });
+  const tot = Math.max(1, tally.up + tally.down + tally.left + tally.right);
+  for (const d of ['up', 'down', 'left', 'right']) {
+    document.getElementById(`bar-${d}`).style.width = (tally[d] / tot * 100).toFixed(1) + '%';
+    document.getElementById(`cnt-${d}`).textContent = tally[d];
+  }
 
   // Tours
-  document.getElementById('tours-count').textContent = `${s.toursJoues} tour${s.toursJoues !== 1 ? 's' : ''} joué${s.toursJoues !== 1 ? 's' : ''}`;
+  document.getElementById('tours-count').textContent =
+    `${s.toursJoues} tour${s.toursJoues !== 1 ? 's' : ''} joué${s.toursJoues !== 1 ? 's' : ''}`;
 }
 
+function updateOverlay(status) {
+  const ov = document.getElementById('overlay');
+  const title = document.getElementById('overlay-title');
+  const sub   = document.getElementById('overlay-sub');
+  const msgs = {
+    lobby:           ['En attente…',               "L'animateur lancera la partie"],
+    paused:          ['Pause',                      'En attente de joueurs…'],
+    levelTransition: ['Salle sur Demande !',        'Niveau suivant…'],
+    gameover:        ['Game Over',                  "L'animateur peut relancer"],
+    won:             ["L'Armée de Dumbledore\nvaincra !", '🎉 Victoire ! 🎉'],
+  };
+  if (msgs[status]) {
+    title.textContent = msgs[status][0];
+    sub.textContent   = msgs[status][1];
+    ov.classList.add('visible');
+  } else {
+    ov.classList.remove('visible');
+  }
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────
 function addChatLine(event) {
   const line = document.createElement('div');
   line.className = 'chat-line';
+  const sym = { up: '↑', down: '↓', left: '←', right: '→' };
   if (event.type === 'input') {
-    const dirSymbols = { up: '↑', down: '↓', left: '←', right: '→' };
-    line.innerHTML = `<span class="pseudo">@${escHtml(event.pseudo)}</span> <span class="dir">${dirSymbols[event.dir] || ''}</span>`;
+    line.innerHTML = `<span class="pseudo">@${escHtml(event.pseudo)}</span> <span class="dir">${sym[event.dir] || ''}</span>`;
   } else if (event.type === 'join') {
-    line.className += ' join';
-    line.textContent = `→ @${event.pseudo} est arrivé`;
+    line.className += ' join'; line.textContent = `→ @${escHtml(event.pseudo)} est arrivé`;
   } else if (event.type === 'leave') {
-    line.className += ' leave';
-    line.textContent = `← @${event.pseudo} est parti`;
+    line.className += ' leave'; line.textContent = `← @${escHtml(event.pseudo)} est parti`;
   } else if (event.type === 'kick') {
-    line.className += ' leave';
-    line.textContent = `⛔ @${event.pseudo} exclu`;
+    line.className += ' leave'; line.textContent = `⛔ @${escHtml(event.pseudo)} exclu`;
   }
   chatLines.unshift(line);
   if (chatLines.length > CHAT_MAX) chatLines.pop();
@@ -614,29 +798,45 @@ function addChatLine(event) {
   chatLines.forEach(l => chatEl.appendChild(l));
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────
 function escHtml(s) {
-  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+const _hexRgbCache = {};
+function hexToRgb(hex) {
+  if (_hexRgbCache[hex]) return _hexRgbCache[hex];
+  const m = hex.replace('#', '').match(/../g);
+  if (!m) return '128,128,128';
+  const r = `${parseInt(m[0], 16)},${parseInt(m[1], 16)},${parseInt(m[2], 16)}`;
+  _hexRgbCache[hex] = r;
+  return r;
+}
+
+// ── Socket ────────────────────────────────────────────────────────────────
+const socket = io();
+
 socket.on('state:update', (s) => {
+  const prev = state;
   state = s;
-  render();
+  // Record trails when footprints enabled
+  if (s.settings?.footprints) {
+    recordTrail('avatar', s.avatar.r, s.avatar.c, s.avatar.dir);
+    for (const p of s.pursuers) recordTrail(p.id, p.r, p.c, p.dir);
+    pruneTrails(['avatar', ...s.pursuers.map(p => p.id)]);
+  } else if (prev && !s.settings?.footprints) {
+    // Clear trails when footprints turned off
+    for (const k of Object.keys(trail)) delete trail[k];
+  }
   updateHUD(s);
 });
 
-socket.on('chat:event', (event) => {
-  addChatLine(event);
-});
+socket.on('chat:event', addChatLine);
 
-// Re-render on window resize (recalculates cell size)
-window.addEventListener('resize', () => { if (state) render(); });
+window.addEventListener('resize', () => { lastCell = 0; if (state) render(); });
 
-// Render loop for smooth animation
-function loop() {
-  if (state) render();
-  requestAnimationFrame(loop);
-}
-loop();
+// ── Render loop ───────────────────────────────────────────────────────────
+(function loop() { if (state) render(); requestAnimationFrame(loop); })();
 </script>
 </body>
 </html>
