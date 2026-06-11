@@ -195,6 +195,14 @@
   </div>
 
   <div class="control-row">
+    <label>Déplacement automatique</label>
+    <select id="set-auto-move" onchange="sendSettings()">
+      <option value="true">Activé (avance en continu)</option>
+      <option value="false">Désactivé (1 case par input)</option>
+    </select>
+  </div>
+
+  <div class="control-row">
     <label>Forcer niveau</label>
     <select id="set-force-level">
       <option value="1">Niveau 1 — Rusard</option>
@@ -262,6 +270,7 @@ function sendSettings() {
     wandCountPerLevel: parseInt(document.getElementById('set-wands').value),
     avatarSpeed: parseFloat(document.getElementById('set-avatar-speed').value),
     pursuerSpeed: parseFloat(document.getElementById('set-pursuer-speed').value),
+    autoMove: document.getElementById('set-auto-move').value === 'true',
   });
 }
 
@@ -294,6 +303,8 @@ function updateUI(s) {
     document.getElementById('set-pursuer-speed').value = s.settings.pursuerSpeed;
   document.getElementById('set-mode').value = s.mode;
   document.getElementById('set-objective').value = s.objectiveMode;
+  if (document.activeElement.id !== 'set-auto-move')
+    document.getElementById('set-auto-move').value = String(s.settings.autoMove);
 
   // Player list
   const list = document.getElementById('player-list');

@@ -22,6 +22,8 @@ export interface MapData {
   avatarStart: { r: number; c: number };
   pursuerSpawns: { r: number; c: number }[];
   room: { r: number; c: number }[];
+  /** Single entry cell into the room — only this cell triggers level completion. */
+  roomDoor?: { r: number; c: number };
   tunnels: { horizontal: number[]; vertical: number[] };
   createdAt?: string;
   updatedAt?: string;
@@ -83,6 +85,8 @@ export interface GameSettings {
   avatarSpeed: number;
   voteWindowSec: number;
   wandCountPerLevel: number;
+  /** If false, avatar only moves one step per played direction (no continuous movement). */
+  autoMove: boolean;
 }
 
 export interface GameState {
@@ -147,6 +151,7 @@ export interface PublicGameState {
   mapHeight: number;
   mapCells: CellType[][];
   mapTunnels: { horizontal: number[]; vertical: number[] };
+  mapRoomDoor: { r: number; c: number } | null;
   avatar: Avatar;
   pursuers: Pursuer[];
   wands: Wand[];

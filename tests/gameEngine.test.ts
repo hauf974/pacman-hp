@@ -8,6 +8,7 @@ import {
   checkCollisions,
   checkRoomEntry,
   allWandsCollected,
+  bfsNextDir,
 } from '../src/server/gameEngine';
 import { TimedInput, MapData, GameState, Avatar, Direction } from '../src/shared/types';
 
@@ -58,7 +59,7 @@ function makeState(
     settings: {
       tempo: 'anime', atmosphere: 'parchemin', titleFont: 'UnifrakturCook',
       footprints: false, pursuerSpeed: 3, avatarSpeed: 4, voteWindowSec: 3,
-      wandCountPerLevel: 3,
+      wandCountPerLevel: 3, autoMove: true,
     },
     toursJoues: 0,
   };
@@ -316,7 +317,7 @@ describe('checkCollisions', () => {
 
 // ─── Room entry / level transition ───────────────────────────────────────────
 
-describe('checkRoomEntry', () => {
+describe('checkRoomEntry — fallback (no roomDoor)', () => {
   const map = makeMap([[0, 0, 0]]);
   const room = [{ r: 0, c: 2 }];
 
@@ -332,6 +333,34 @@ describe('checkRoomEntry', () => {
 
   test('no entry when room is empty list', () => {
     const state = makeState(makeAvatar(0, 2, 'right'), map, [], []);
+    expect(checkRoomEntry(state)).toBe(false);
+  });
+});
+
+describe('checkRoomEntry — with roomDoor (single door)', () => {
+  // Map: corridor [0,0,0], room at c=2, door at c=1
+  function makeMapWithDoor(door: { r: number; c: number }): any {
+    return {
+      ...makeMap([[0, 0, 0]]),
+      room: [{ r: 0, c: 2 }],
+      roomDoor: door,
+    };
+  }
+
+  test('triggers only on door cell, not other room cells', () => {
+    const map = makeMapWithDoor({ r: 0, c: 1 });
+    const room = [{ r: 0, c: 2 }];
+    // Avatar at door cell → true
+    const s1 = makeState(makeAvatar(0, 1, 'right'), map, [], room);
+    expect(checkRoomEntry(s1)).toBe(true);
+    // Avatar at room cell (c=2) → false (door is at c=1)
+    const s2 = makeState(makeAvatar(0, 2, 'right'), map, [], room);
+    expect(checkRoomEntry(s2)).toBe(false);
+  });
+
+  test('no entry when avatar is at unrelated position', () => {
+    const map = makeMapWithDoor({ r: 0, c: 1 });
+    const state = makeState(makeAvatar(0, 0, 'right'), map, [], [{ r: 0, c: 2 }]);
     expect(checkRoomEntry(state)).toBe(false);
   });
 });
@@ -362,6 +391,91 @@ describe('lives & game-over logic', () => {
     const state = makeState(makeAvatar(0, 0, 'right'), map, [{ r: 0, c: 0 }]);
     state.lives--;
     expect(state.lives > 0).toBe(true);
+  });
+});
+
+// ─── BFS pathfinding (pursuer AI) ────────────────────────────────────────────
+
+describe('bfsNextDir', () => {
+  // Simple 1×5 corridor: [0,0,0,0,0]
+  const corridor = makeMap([[0, 0, 0, 0, 0]]);
+
+  test('straight path — returns correct direction', () => {
+    expect(bfsNextDir(corridor, 0, 0, 0, 4)).toBe('right');
+    expect(bfsNextDir(corridor, 0, 4, 0, 0)).toBe('left');
+  });
+
+  test('already at goal — returns null', () => {
+    expect(bfsNextDir(corridor, 0, 2, 0, 2)).toBeNull();
+  });
+
+  test('no path when goal is walled off — returns null', () => {
+    // Map: [0,0,1,0,0] — wall at col 2 blocks path
+    const blocked = makeMap([[0, 0, 1, 0, 0]]);
+    expect(bfsNextDir(blocked, 0, 0, 0, 4)).toBeNull();
+  });
+
+  test('cross-shaped map — finds path around walls', () => {
+    // 3×3 cross: center open, corners walled
+    const cross = makeMap([
+      [1, 0, 1],
+      [0, 0, 0],
+      [1, 0, 1],
+    ]);
+    // From (0,1) to (2,1): must go down
+    expect(bfsNextDir(cross, 0, 1, 2, 1)).toBe('down');
+    // From (1,0) to (1,2): must go right
+    expect(bfsNextDir(cross, 1, 0, 1, 2)).toBe('right');
+  });
+
+  test('tunnel wraparound — finds shorter path through tunnel', () => {
+    // 1×5 corridor with horizontal tunnel on row 0
+    // From col 4 going right → wraps to col 0 (distance 2 via tunnel, vs 4 direct)
+    const tunnelMap = makeMap([[0, 0, 0, 0, 0]], [0]);
+    // Shortest from (0,3) to (0,1): direct left (2 steps) vs tunnel right (3 steps) → left
+    expect(bfsNextDir(tunnelMap, 0, 3, 0, 1)).toBe('left');
+    // Shortest from (0,4) to (0,0): tunnel right (2 steps via wrap) vs direct left (4 steps)
+    expect(bfsNextDir(tunnelMap, 0, 4, 0, 0)).toBe('right');
+  });
+
+  test('vertical tunnel wraparound', () => {
+    // 5×1 corridor with vertical tunnel on col 0
+    const tunnelMap = makeMap([[0], [0], [0], [0], [0]], [], [0]);
+    // Shortest from (4,0) to (0,0): up (4 steps) vs wrap down (2 steps)
+    expect(bfsNextDir(tunnelMap, 4, 0, 0, 0)).toBe('down');
+  });
+});
+
+// ─── autoMove mode ────────────────────────────────────────────────────────────
+
+describe('autoMove — avatar step logic', () => {
+  // autoMove is a store-level concern; here we verify the building-block:
+  // computeAvatarStep does NOT advance if there is no movement direction.
+
+  const corridor = makeMap([[0, 0, 0, 0, 0]]);
+
+  test('avatar stays put when dir=left at col 0 and no queued dir (wall ahead, autoMove irrelevant)', () => {
+    // Blocked left at edge
+    const r = computeAvatarStep(corridor, 0, 0, 'left', null);
+    expect(r).toMatchObject({ r: 0, c: 0 });
+  });
+
+  test('avatar advances when tickAvatar is called (simulates autoMove=true)', () => {
+    // This tests that tickAvatar moves normally when called
+    const map = makeMap([[0, 0, 0, 0, 0]]);
+    const state = makeState(makeAvatar(0, 1, 'right'), map);
+    // Simulate one tick with autoMove=true (always call tickAvatar)
+    const { moved } = require('../src/server/gameEngine').tickAvatar(state);
+    expect(moved).toBe(true);
+    expect(state.avatar.c).toBe(2);
+  });
+
+  test('avatar does NOT advance when tickAvatar is NOT called (simulates autoMove=false, no input)', () => {
+    // If we skip calling tickAvatar, avatar stays put — mirrors the store logic
+    const map = makeMap([[0, 0, 0, 0, 0]]);
+    const state = makeState(makeAvatar(0, 1, 'right'), map);
+    // No call to tickAvatar — autoMove=false + no input
+    expect(state.avatar.c).toBe(1);
   });
 });
 

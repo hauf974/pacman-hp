@@ -34,6 +34,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   avatarSpeed: 4,
   voteWindowSec: 3,
   wandCountPerLevel: 3,
+  autoMove: true,
 };
 
 function loadMap(name: string): MapData {
@@ -117,6 +118,7 @@ class GameStore {
       mapHeight: s.activeMap.height,
       mapCells: s.activeMap.cells,
       mapTunnels: s.activeMap.tunnels,
+      mapRoomDoor: s.activeMap.roomDoor ?? null,
       avatar: { ...s.avatar },
       pursuers: s.pursuers.map(p => ({ ...p })),
       wands: s.wands.map(w => ({ ...w })),
@@ -154,11 +156,13 @@ class GameStore {
     if (this.avatarTickAccum >= avatarPeriodMs) {
       this.avatarTickAccum -= avatarPeriodMs;
 
+      let hasInput = false;
       if (s.mode === 'democracy') {
         const dir = aggregateDemocracy(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
         if (dir) {
           applyDirectionToAvatar(s, dir);
           s.toursJoues++;
+          hasInput = true;
         }
         s.voteTally = buildVoteTally(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
       } else {
@@ -167,11 +171,15 @@ class GameStore {
           const dir = s.chaosQueue.shift()!;
           applyDirectionToAvatar(s, dir);
           s.toursJoues++;
+          hasInput = true;
         }
         s.voteTally = buildVoteTally(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
       }
 
-      tickAvatar(s);
+      // autoMove=false: only step when an input was actually played
+      if (s.settings.autoMove || hasInput) {
+        tickAvatar(s);
+      }
 
       // Check wand collection
       if (s.objectiveMode === 'collect') {

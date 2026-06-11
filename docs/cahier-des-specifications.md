@@ -2,7 +2,7 @@
 
 > Jeu multijoueur collaboratif type *Twitch Plays Pokémon*, projeté sur les écrans d'un bar, contrôlé collectivement par les téléphones des joueurs.
 
-- **Version** : 1.1 (ajout de l'éditeur de cartes — §6 bis)
+- **Version** : 1.2 (corrections M2.5 : plein écran adaptatif, déplacement auto optionnel, salle = porte unique, IA pathfinding, murs de contour + tunnels visibles)
 - **Date** : 11 juin 2026
 - **Statut** : 🟢 Validé, prêt à construire
 - **Design de référence** : mockup « pacman-hp » (« La Carte Ensorcelée »), voir §10 et `mockup-reference.png` ; maquette conceptuelle de carte 23×23 voir §6 bis et `map-concept.png`
@@ -29,7 +29,7 @@ Objectif d'expérience : un jeu **convivial, lisible de loin, immédiatement com
 
 | Terme | Définition |
 |---|---|
-| **Écran de jeu / Affichage** | Vue projetée sur tous les écrans du bar (identique partout). Navigateur plein écran sur TV, **1920×1080, sans défilement**. |
+| **Écran de jeu / Affichage** | Vue projetée sur tous les écrans du bar (identique partout). Navigateur plein écran sur TV, **adaptatif (100 vw × 100 vh), sans défilement**. |
 | **Manette** | Page web mobile servie au joueur après scan du QR. 4 boutons directionnels. S'adapte à tous smartphones/navigateurs. |
 | **Interface animateur** | Console d'administration privée, non projetée. |
 | **Joueur** | Personne connectée via son téléphone, émettant des inputs directionnels. |
@@ -73,7 +73,7 @@ Trois clients web partagent le même backend :
 
 ## 4. Spécifications fonctionnelles — Affichage (écran de jeu)
 
-Cible **1920×1080**, navigateur plein écran sur TV, **aucun défilement** : tous les éléments tiennent dans le cadre. Style « parchemin ensorcelé » fidèle au mockup (§10).
+**Plein écran adaptatif** : l'affichage remplit exactement la fenêtre du navigateur (`100 vw × 100 vh`), s'adapte à n'importe quelle résolution (TV 1080p, 4K, projecteur…), sans défilement. La taille de cellule est recalculée dynamiquement selon la résolution disponible. Style « parchemin ensorcelé » fidèle au mockup (§10).
 
 ### 4.1 Disposition (mise à jour d'après le mockup et tes retours)
 
@@ -228,6 +228,11 @@ Cartes stockées en **fichiers JSON dans un volume Docker** (survivent aux redé
 Map {
   name, width, height,
   cells: [[ ... ]],   // 0=couloir, 1=mur, 2=salle, 3=départ avatar, 4=spawn poursuivant
+  avatarStart: {r, c},
+  pursuerSpawns: [{r, c}, ...],
+  room: [{r, c}, ...],
+  roomDoor: {r, c},          // porte unique vers la salle (case couloir, seule entrée)
+  tunnels: { horizontal: [rowIdx], vertical: [colIdx] },
   createdAt, updatedAt
 }
 ```
@@ -237,10 +242,12 @@ Map {
 ## 7. Spécifications fonctionnelles — Mécaniques de jeu
 
 ### 7.1 Déplacement (style Pac-Man, à l'identique)
-- L'avatar **avance automatiquement** à vitesse constante le long des couloirs.
-- Les joueurs ne choisissent **que la direction**. Une direction n'est appliquée que si un **virage est possible** ; sinon elle est mise en file jusqu'à la prochaine intersection compatible (comportement Pac-Man classique).
+- **Mode déplacement automatique (réglable admin)** :
+  - **Activé (défaut)** : l'avatar avance automatiquement à vitesse constante le long des couloirs ; les joueurs ne choisissent que la direction.
+  - **Désactivé** : l'avatar ne bouge que d'une case à chaque direction jouée (Démocratie ou Chaos) — aucun déplacement automatique entre deux inputs.
+- Une direction n'est appliquée que si un virage est possible ; sinon elle est mise en file jusqu'à la prochaine intersection compatible (comportement Pac-Man classique).
 - Murs = cases grisées de la grille ; pas de traversée.
-- **Tunnels (wraparound)** : si les murs le permettent, une case-couloir sur un bord communique avec la case opposée — **gauche ↔ droite** et **haut ↔ bas**.
+- **Tunnels (wraparound)** : la carte possède un **mur de contour** sur tout le pourtour, avec **uniquement les ouvertures de tunnel** comme trouées (rendues visuellement distinctes — flèche colorée). Les tunnels permettent le wraparound **gauche ↔ droite** et **haut ↔ bas**.
 - **La carte est définie par la grille active** (éditeur, §6 bis). Les 5 niveaux se jouent sur la **même carte** ; seul le nombre de poursuivants change. La carte par défaut « pacman » reprend la maquette conceptuelle 23×23.
 
 ### 7.2 Mode Démocratie
@@ -253,7 +260,7 @@ Map {
 - **Tous les inputs entrent dans une file appliquée séquentiellement** (chaque input demande un virage à la prochaine intersection compatible). C'est l'empilement des intentions de tous les joueurs qui produit le chaos.
 
 ### 7.4 Poursuivants
-- IA simple (poursuite + part d'aléatoire), façon fantômes de Pac-Man.
+- **IA pathfinding réel** : chaque poursuivant calcule son prochain pas par **BFS** (largeur d'abord) dans le labyrinthe, en tenant compte des tunnels wraparound. 30 % de chance de déviation aléatoire par tick (comportement non déterministe). Pas de rapprochement à vol d'oiseau.
 - **Même vitesse pour tous, aucune capacité spéciale** ; vitesse **réglable** par l'animateur.
 - **Collision avatar / poursuivant = perte d'une vie** (voir §7.7).
 - Nombre de poursuivants croissant selon le niveau (§8).
@@ -265,7 +272,8 @@ Map {
 
 ### 7.6 Salle sur Demande (objectif)
 - **Petite pièce** (zone ouverte de plusieurs cases) définie dans la grille ; **position fixe** sur la carte active.
-- Y entrer **termine le niveau** (à condition d'avoir collecté toutes les baguettes si mode collecte).
+- **Porte unique** : l'accès à la pièce ne se fait que par **une seule case « porte »** (`roomDoor` dans le format de carte) — le reste du contour de la pièce est mur. La porte est visuellement distincte (arche verte sur `/screen`).
+- Franchir la porte **termine le niveau** (à condition d'avoir collecté toutes les baguettes si mode collecte).
 
 ### 7.7 Vies, victoire, défaite
 - **3 vies partagées** (un seul joueur « logique » collectif).
@@ -412,13 +420,17 @@ GameState {
 | 17 | Réseau | Doit fonctionner en 4G (Internet). |
 | 18 | Juridique | Usage privé ; assets de l'IP autorisés. |
 | 19 | Graphisme | Rendu pro fidèle au mockup « pacman-hp ». |
-| 20 | Carte | Définie par une grille éditable (pas codée en dur) ; carte par défaut « pacman » 23×23. |
-| 21 | Salle sur Demande | Petite pièce (zone ouverte), position fixe, placée dans l'éditeur. |
+| 20 | Carte | Définie par une grille éditable (pas codée en dur) ; carte par défaut « pacman » 23×23. Mur de contour obligatoire, ouvertures de tunnel explicites. |
+| 21 | Salle sur Demande | Petite pièce (zone ouverte), porte unique (`roomDoor`), position fixe, placée dans l'éditeur. |
 | 22 | Spawns | Départ avatar + apparitions poursuivants placés dans l'éditeur. |
 | 23 | Génération aléatoire | Style à boucles (Pac-Man), couloirs 1 case, connexité, salle obligatoire, tunnels ; résultat éditable. |
 | 24 | Tunnels | Wraparound gauche↔droite et haut↔bas si les murs le permettent. |
 | 25 | Persistance cartes | Fichiers JSON dans un volume Docker (sans base de données). |
 | 26 | Changement de carte | Au lobby / reset (pas en plein niveau). |
+| 27 | Déplacement auto | Réglable admin (on/off). Off = 1 case par input. |
+| 28 | IA poursuivants | BFS dans le labyrinthe (tunnel inclus) + 30 % aléatoire. |
+| 29 | Tunnels visuels | Ouvertures de tunnel distinguables sur /screen (flèche colorée). |
+| 30 | Plein écran adaptatif | 100 vw × 100 vh, redimensionnement dynamique. |
 
 ---
 
@@ -426,7 +438,7 @@ GameState {
 
 - [ ] **Jalon initial** : tout fonctionne sur un **port exposé de l'IP du serveur de dev** (screen + play + admin connectés).
 - [ ] Un joueur scanne le QR, saisit un pseudo, obtient une manette 4 directions en < 15 s, **en 4G**.
-- [ ] L'écran tient en **1920×1080 sans scroll**, fidèle au mockup corrigé (§4.1).
+- [ ] L'écran s'adapte à **n'importe quelle résolution** (100 vw × 100 vh, sans scroll), fidèle au mockup corrigé (§4.1).
 - [ ] L'avatar avance et tourne selon les directions, murs respectés (Pac-Man à l'identique).
 - [ ] **Démocratie** : vote majoritaire sur fenêtre réglable, égalité aléatoire.
 - [ ] **Chaos** : file d'inputs séquentielle.

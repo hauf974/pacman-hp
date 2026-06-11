@@ -121,35 +121,70 @@ export function applyDirectionToAvatar(state: GameState, dir: Direction): void {
   state.avatar.queuedDir = dir;
 }
 
-// Simple pursuer AI: try to move toward avatar, with some randomness
-export function tickPursuer(map: MapData, pursuer: Pursuer, avatar: Avatar): void {
-  const dirs: Direction[] = ['up', 'down', 'left', 'right'];
-
-  // 70% chance to move toward avatar, 30% random
-  const dr = avatar.r - pursuer.r;
-  const dc = avatar.c - pursuer.c;
-
-  let preferred: Direction[] = [];
-  if (Math.abs(dr) > Math.abs(dc)) {
-    preferred = dr > 0 ? ['down', 'up', 'left', 'right'] : ['up', 'down', 'left', 'right'];
-  } else {
-    preferred = dc > 0 ? ['right', 'left', 'up', 'down'] : ['left', 'right', 'up', 'down'];
-  }
-
-  const useRandom = Math.random() < 0.3;
-  const order = useRandom
-    ? [...dirs].sort(() => Math.random() - 0.5)
-    : preferred;
-
-  for (const dir of order) {
-    if (canMove(map, pursuer.r, pursuer.c, dir)) {
-      const pos = moveEntity(map, pursuer.r, pursuer.c, dir);
-      pursuer.r = pos.r;
-      pursuer.c = pos.c;
-      pursuer.dir = dir;
-      break;
+/**
+ * BFS on the walkable grid (respecting tunnels) from (startR,startC) toward (goalR,goalC).
+ * Returns the first Direction to take, or null if no path exists.
+ */
+export function bfsNextDir(
+  map: MapData,
+  startR: number,
+  startC: number,
+  goalR: number,
+  goalC: number,
+): Direction | null {
+  if (startR === goalR && startC === goalC) return null;
+  const DIRS: Direction[] = ['up', 'down', 'left', 'right'];
+  const visited = new Set<string>();
+  visited.add(`${startR},${startC}`);
+  const queue: Array<{ r: number; c: number; firstDir: Direction }> = [];
+  for (const dir of DIRS) {
+    if (canMove(map, startR, startC, dir)) {
+      const { r, c } = moveEntity(map, startR, startC, dir);
+      const key = `${r},${c}`;
+      if (!visited.has(key)) {
+        visited.add(key);
+        if (r === goalR && c === goalC) return dir;
+        queue.push({ r, c, firstDir: dir });
+      }
     }
   }
+  while (queue.length > 0) {
+    const { r, c, firstDir } = queue.shift()!;
+    for (const dir of DIRS) {
+      if (canMove(map, r, c, dir)) {
+        const next = moveEntity(map, r, c, dir);
+        const key = `${next.r},${next.c}`;
+        if (!visited.has(key)) {
+          visited.add(key);
+          if (next.r === goalR && next.c === goalC) return firstDir;
+          queue.push({ r: next.r, c: next.c, firstDir });
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// Pursuer AI: BFS pathfinding toward avatar with 30% random deviation
+export function tickPursuer(map: MapData, pursuer: Pursuer, avatar: Avatar): void {
+  const DIRS: Direction[] = ['up', 'down', 'left', 'right'];
+  const walkable = DIRS.filter(d => canMove(map, pursuer.r, pursuer.c, d));
+  if (walkable.length === 0) return;
+
+  let chosenDir: Direction;
+  if (Math.random() < 0.3) {
+    chosenDir = walkable[Math.floor(Math.random() * walkable.length)];
+  } else {
+    const bfsDir = bfsNextDir(map, pursuer.r, pursuer.c, avatar.r, avatar.c);
+    chosenDir = (bfsDir && walkable.includes(bfsDir))
+      ? bfsDir
+      : walkable[Math.floor(Math.random() * walkable.length)];
+  }
+
+  const pos = moveEntity(map, pursuer.r, pursuer.c, chosenDir);
+  pursuer.r = pos.r;
+  pursuer.c = pos.c;
+  pursuer.dir = chosenDir;
 }
 
 export function checkCollisions(state: GameState): boolean {
@@ -174,6 +209,10 @@ export function checkWandCollection(state: GameState): number {
 
 export function checkRoomEntry(state: GameState): boolean {
   const { avatar, activeMap } = state;
+  if (activeMap.roomDoor) {
+    return avatar.r === activeMap.roomDoor.r && avatar.c === activeMap.roomDoor.c;
+  }
+  // Fallback for maps without explicit roomDoor
   return activeMap.room.some(cell => cell.r === avatar.r && cell.c === avatar.c);
 }
 
