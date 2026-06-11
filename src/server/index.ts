@@ -14,6 +14,9 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET ?? 'pacmage-admin';
 const PUBLIC_URL = process.env.PUBLIC_URL ?? `http://localhost:${PORT}`;
 
 const app = express();
+// Trust the first proxy (Nginx Proxy Manager) so that req.ip and protocol are correct
+// behind HTTPS reverse proxy
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new IOServer(server, {
   cors: { origin: '*' },

@@ -2,7 +2,7 @@ services:
   pacmage:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
     environment:
@@ -10,5 +10,7 @@ services:
       ADMIN_SECRET: "${ADMIN_SECRET:-pacmage-admin}"
       PUBLIC_URL: "${PUBLIC_URL:-http://localhost:3000}"
     volumes:
+      - ./src:/app/src
       - ./data:/app/data
+      - ./tsconfig.json:/app/tsconfig.json
     restart: unless-stopped

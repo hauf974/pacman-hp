@@ -1,0 +1,26 @@
+services:
+  pacmage:
+    build: .
+    container_name: pacmage
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+    volumes:
+      # Named volume: maps persist across container restarts and image updates.
+      # Docker seeds it from the image's /app/data/maps/ on first run (default pacman.json).
+      # Subsequent runs preserve user-created maps.
+      - pacmage_maps:/app/data/maps
+    networks:
+      - nginx-proxy-network
+
+volumes:
+  pacmage_maps:
+    name: pacmage_maps
+
+networks:
+  # External network managed by Nginx Proxy Manager.
+  # Create once on the host: docker network create nginx-proxy-network
+  nginx-proxy-network:
+    external: true

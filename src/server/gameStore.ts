@@ -6,7 +6,7 @@ import {
   MapData,
   GameSettings,
   PublicGameState,
-  PublicPlayer,
+  Player,
   Direction,
   TimedInput,
 } from '../shared/types';
@@ -26,6 +26,7 @@ import {
 } from './gameEngine';
 
 const MAPS_DIR = path.join(process.cwd(), 'data', 'maps');
+
 const DEFAULT_SETTINGS: GameSettings = {
   tempo: 'anime',
   atmosphere: 'parchemin',
@@ -38,6 +39,11 @@ const DEFAULT_SETTINGS: GameSettings = {
   autoMove: true,
   startingLevel: 1,
 };
+
+// Rate limiter constants
+const INPUT_RATE_WINDOW_MS = 1000;
+const INPUT_RATE_MAX = 20;      // max inputs per player per second
+const CHAOS_QUEUE_MAX = 200;    // ~30 s at 6 inputs/s — prevents unbounded growth
 
 function loadMap(name: string): MapData {
   const file = path.join(MAPS_DIR, `${name}.json`);
@@ -80,11 +86,17 @@ function createInitialState(mapName = 'pacman'): GameState {
   };
 }
 
-class GameStore {
+export class GameStore {
   private state: GameState;
   private activeMapName = 'pacman';
   private avatarTickAccum = 0;
   private pursuerTickAccum = 0;
+
+  // Cleanup timers keyed by player token (token is stable across socket rebinds)
+  private cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  // Rate limiter: socket id → sorted timestamp array within current window
+  private inputRateLimiter = new Map<string, number[]>();
+
   private onBroadcast?: (state: PublicGameState) => void;
   private onChatEvent?: (event: {
     type: 'input' | 'join' | 'leave' | 'kick';
@@ -96,7 +108,7 @@ class GameStore {
   private onGameWon?: () => void;
   private onLevelTransition?: (level: number) => void;
 
-  constructor() {
+  constructor(private readonly cleanupDelayMs = 5 * 60 * 1000) {
     this.state = createInitialState();
   }
 
@@ -145,6 +157,17 @@ class GameStore {
       wandTotal: s.wands.length,
       wandCollected,
     };
+  }
+
+  // Exposed for tests only — returns a shallow copy of players record
+  getPlayersSnapshot(): Record<string, Player> {
+    const out: Record<string, Player> = {};
+    for (const [k, v] of Object.entries(this.state.players)) out[k] = { ...v };
+    return out;
+  }
+
+  getStatus(): GameStatus {
+    return this.state.status;
   }
 
   tick(dtMs: number) {
@@ -206,21 +229,8 @@ class GameStore {
         }
       }
 
-      // Check collisions
-      if (checkCollisions(s)) {
-        s.lives--;
-        if (s.lives <= 0) {
-          s.status = 'gameover';
-          this.broadcast();
-          this.onGameOver?.();
-          return;
-        }
-        // Reset positions
-        s.avatar.r = s.activeMap.avatarStart.r;
-        s.avatar.c = s.activeMap.avatarStart.c;
-        s.avatar.queuedDir = null;
-        s.pursuers = spawnPursuers(s.activeMap, s.level, s.settings.pursuerSpeed);
-      }
+      // Check collisions after avatar move
+      if (checkCollisions(s) && this.handleCollision()) return;
     }
 
     // Tick pursuers
@@ -231,22 +241,28 @@ class GameStore {
         tickPursuer(s.activeMap, pursuer, s.avatar);
       }
       // Check collisions after pursuer move
-      if (checkCollisions(s)) {
-        s.lives--;
-        if (s.lives <= 0) {
-          s.status = 'gameover';
-          this.broadcast();
-          this.onGameOver?.();
-          return;
-        }
-        s.avatar.r = s.activeMap.avatarStart.r;
-        s.avatar.c = s.activeMap.avatarStart.c;
-        s.avatar.queuedDir = null;
-        s.pursuers = spawnPursuers(s.activeMap, s.level, s.settings.pursuerSpeed);
-      }
+      if (checkCollisions(s) && this.handleCollision()) return;
     }
 
     this.broadcast();
+  }
+
+  /** Returns true if the game ended (game over). */
+  private handleCollision(): boolean {
+    const s = this.state;
+    s.lives--;
+    if (s.lives <= 0) {
+      s.status = 'gameover';
+      this.broadcast();
+      this.onGameOver?.();
+      return true;
+    }
+    // Reset avatar and pursuer positions
+    s.avatar.r = s.activeMap.avatarStart.r;
+    s.avatar.c = s.activeMap.avatarStart.c;
+    s.avatar.queuedDir = null;
+    s.pursuers = spawnPursuers(s.activeMap, s.level, s.settings.pursuerSpeed);
+    return false;
   }
 
   private advanceLevel() {
@@ -311,6 +327,10 @@ class GameStore {
   }
 
   reset() {
+    // Cancel all pending cleanup timers
+    for (const timer of this.cleanupTimers.values()) clearTimeout(timer);
+    this.cleanupTimers.clear();
+    this.inputRateLimiter.clear();
     this.state = createInitialState(this.activeMapName);
     this.avatarTickAccum = 0;
     this.pursuerTickAccum = 0;
@@ -321,10 +341,6 @@ class GameStore {
     return this.activeMapName;
   }
 
-  /**
-   * Switch the active map. Only allowed outside an ongoing level
-   * (lobby / gameover / won) so a running game is never disrupted.
-   */
   setActiveMap(map: MapData): { ok: boolean; reason?: string } {
     const s = this.state;
     if (!(s.status === 'lobby' || s.status === 'gameover' || s.status === 'won')) {
@@ -398,7 +414,6 @@ class GameStore {
       token,
     };
     this.onChatEvent?.({ type: 'join', pseudo, ts: Date.now() });
-    // Resume only if paused due to zero players (not an admin pause)
     if (s.status === 'paused') {
       s.status = 'playing';
     }
@@ -410,6 +425,9 @@ class GameStore {
     const player = s.players[id];
     if (!player || s.status !== 'playing') return;
 
+    // Rate limit: silently drop excess inputs (prevents spam / bots)
+    if (this.isRateLimited(id)) return;
+
     player.lastInput = dir;
     player.lastSeen = Date.now();
 
@@ -417,10 +435,13 @@ class GameStore {
     s.inputBuffer.push(timedInput);
 
     if (s.mode === 'chaos') {
-      s.chaosQueue.push(dir);
+      // Cap chaos queue to avoid unbounded memory growth
+      if (s.chaosQueue.length < CHAOS_QUEUE_MAX) {
+        s.chaosQueue.push(dir);
+      }
     }
 
-    // Keep buffer bounded
+    // Keep democracy input buffer bounded
     if (s.inputBuffer.length > 500) {
       s.inputBuffer = s.inputBuffer.slice(-200);
     }
@@ -435,6 +456,25 @@ class GameStore {
     player.connected = false;
     this.onChatEvent?.({ type: 'leave', pseudo: player.pseudo, ts: Date.now() });
 
+    // Clear rate limiter for this socket
+    this.inputRateLimiter.delete(id);
+
+    // Schedule cleanup: remove the player after `cleanupDelayMs` if not reconnected
+    const existingTimer = this.cleanupTimers.get(player.token);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const token = player.token;
+    const timer = setTimeout(() => {
+      this.cleanupTimers.delete(token);
+      // Find player by token (socket ID may have changed)
+      const current = Object.values(s.players).find(p => p.token === token);
+      if (current && !current.connected) {
+        delete s.players[current.id];
+        this.broadcast();
+      }
+    }, this.cleanupDelayMs);
+    this.cleanupTimers.set(token, timer);
+
     const connectedCount = Object.values(s.players).filter(p => p.connected).length;
     if (connectedCount === 0 && s.status === 'playing') {
       s.status = 'paused';
@@ -447,12 +487,25 @@ class GameStore {
     const player = Object.values(s.players).find(p => p.token === token);
     if (!player) return false;
 
+    // Cancel the pending cleanup timer for this token
+    const timer = this.cleanupTimers.get(token);
+    if (timer) {
+      clearTimeout(timer);
+      this.cleanupTimers.delete(token);
+    }
+
+    // Clear rate limiter for old socket ID
+    this.inputRateLimiter.delete(player.id);
+
     // Rebind socket id
     delete s.players[player.id];
     player.id = socketId;
     player.connected = true;
     player.lastSeen = Date.now();
     s.players[socketId] = player;
+
+    // Announce return
+    this.onChatEvent?.({ type: 'join', pseudo: player.pseudo, ts: Date.now() });
 
     if (s.status === 'paused') {
       const connectedCount = Object.values(s.players).filter(p => p.connected).length;
@@ -465,6 +518,10 @@ class GameStore {
   kickPlayer(playerId: string) {
     const player = this.state.players[playerId];
     if (!player) return;
+    // Cancel cleanup timer and rate limiter
+    const timer = this.cleanupTimers.get(player.token);
+    if (timer) { clearTimeout(timer); this.cleanupTimers.delete(player.token); }
+    this.inputRateLimiter.delete(playerId);
     this.onChatEvent?.({ type: 'kick', pseudo: player.pseudo, ts: Date.now() });
     delete this.state.players[playerId];
     this.broadcast();
@@ -475,6 +532,23 @@ class GameStore {
       .readdirSync(MAPS_DIR)
       .filter(f => f.endsWith('.json'))
       .map(f => f.replace('.json', ''));
+  }
+
+  // ---- Private helpers ----
+
+  /** Sliding-window rate limiter: true if this player is over the limit. */
+  private isRateLimited(id: string): boolean {
+    const now = Date.now();
+    if (!this.inputRateLimiter.has(id)) this.inputRateLimiter.set(id, []);
+    const times = this.inputRateLimiter.get(id)!;
+    // Remove timestamps outside the current window
+    const cutoff = now - INPUT_RATE_WINDOW_MS;
+    let i = 0;
+    while (i < times.length && times[i] < cutoff) i++;
+    if (i > 0) times.splice(0, i);
+    if (times.length >= INPUT_RATE_MAX) return true;
+    times.push(now);
+    return false;
   }
 
   private broadcast() {
