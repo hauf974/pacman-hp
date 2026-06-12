@@ -41,11 +41,11 @@ export function dirDelta(dir: Direction): { dr: number; dc: number } {
   }
 }
 
-export function canMove(map: MapData, r: number, c: number, dir: Direction): boolean {
+export function canMove(map: MapData, r: number, c: number, dir: Direction, allowTunnels = true): boolean {
   const { dr, dc } = dirDelta(dir);
   const nr = r + dr;
   const nc = c + dc;
-  // Check tunnel first
+  if (!allowTunnels) return isWalkable(map, nr, nc);
   const tunneled = applyTunnel(map, nr, nc);
   return isWalkable(map, tunneled.r, tunneled.c);
 }
@@ -131,6 +131,7 @@ export function bfsNextDir(
   startC: number,
   goalR: number,
   goalC: number,
+  allowTunnels = true,
 ): Direction | null {
   if (startR === goalR && startC === goalC) return null;
   const DIRS: Direction[] = ['up', 'down', 'left', 'right'];
@@ -138,7 +139,7 @@ export function bfsNextDir(
   visited.add(`${startR},${startC}`);
   const queue: Array<{ r: number; c: number; firstDir: Direction }> = [];
   for (const dir of DIRS) {
-    if (canMove(map, startR, startC, dir)) {
+    if (canMove(map, startR, startC, dir, allowTunnels)) {
       const { r, c } = moveEntity(map, startR, startC, dir);
       const key = `${r},${c}`;
       if (!visited.has(key)) {
@@ -151,7 +152,7 @@ export function bfsNextDir(
   while (queue.length > 0) {
     const { r, c, firstDir } = queue.shift()!;
     for (const dir of DIRS) {
-      if (canMove(map, r, c, dir)) {
+      if (canMove(map, r, c, dir, allowTunnels)) {
         const next = moveEntity(map, r, c, dir);
         const key = `${next.r},${next.c}`;
         if (!visited.has(key)) {
@@ -165,17 +166,18 @@ export function bfsNextDir(
   return null;
 }
 
-// Pursuer AI: BFS pathfinding toward avatar with 30% random deviation
+// Pursuer AI: BFS pathfinding toward avatar with 30% random deviation.
+// Tunnels are reserved for the avatar — pursuers treat tunnel exits as walls.
 export function tickPursuer(map: MapData, pursuer: Pursuer, avatar: Avatar): void {
   const DIRS: Direction[] = ['up', 'down', 'left', 'right'];
-  const walkable = DIRS.filter(d => canMove(map, pursuer.r, pursuer.c, d));
+  const walkable = DIRS.filter(d => canMove(map, pursuer.r, pursuer.c, d, false));
   if (walkable.length === 0) return;
 
   let chosenDir: Direction;
   if (Math.random() < 0.3) {
     chosenDir = walkable[Math.floor(Math.random() * walkable.length)];
   } else {
-    const bfsDir = bfsNextDir(map, pursuer.r, pursuer.c, avatar.r, avatar.c);
+    const bfsDir = bfsNextDir(map, pursuer.r, pursuer.c, avatar.r, avatar.c, false);
     chosenDir = (bfsDir && walkable.includes(bfsDir))
       ? bfsDir
       : walkable[Math.floor(Math.random() * walkable.length)];
@@ -234,18 +236,44 @@ export function consumeChaosInput(chaosQueue: Direction[]): Direction | null {
   return chaosQueue.shift()!;
 }
 
+/** Minimum Manhattan distance enforced between any two spawned wands. */
+export const MIN_WAND_DIST = 4;
+
 export function spawnWands(map: MapData, count: number): { r: number; c: number; collected: boolean }[] {
   const corridors: { r: number; c: number }[] = [];
   for (let r = 0; r < map.height; r++) {
     for (let c = 0; c < map.width; c++) {
-      const cell = map.cells[r][c] as CellType;
-      if (cell === 0) corridors.push({ r, c });
+      if (map.cells[r][c] !== 0) continue;
+      // Exclude the door cell (corridor overlay — would be inaccessible if door is closed)
+      if (map.roomDoor && map.roomDoor.r === r && map.roomDoor.c === c) continue;
+      corridors.push({ r, c });
     }
   }
-  // Shuffle and pick
-  for (let i = corridors.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [corridors[i], corridors[j]] = [corridors[j], corridors[i]];
+
+  // Try up to 20 shuffles to find a valid spacing arrangement
+  let placed: { r: number; c: number }[] = [];
+  const shuffled = [...corridors];
+  for (let attempt = 0; attempt < 20 && placed.length < count; attempt++) {
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    placed = [];
+    for (const cand of shuffled) {
+      if (placed.length >= count) break;
+      if (placed.every(p => Math.abs(p.r - cand.r) + Math.abs(p.c - cand.c) >= MIN_WAND_DIST)) {
+        placed.push(cand);
+      }
+    }
   }
-  return corridors.slice(0, count).map(pos => ({ ...pos, collected: false }));
+
+  // Fallback: fill remaining slots without spacing constraint (map too small)
+  if (placed.length < count) {
+    for (const cand of shuffled) {
+      if (placed.length >= count) break;
+      if (!placed.some(p => p.r === cand.r && p.c === cand.c)) placed.push(cand);
+    }
+  }
+
+  return placed.map(pos => ({ ...pos, collected: false }));
 }

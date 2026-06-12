@@ -32,7 +32,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   atmosphere: 'parchemin',
   titleFont: 'UnifrakturCook',
   footprints: true,
-  pursuerSpeed: 3,
+  pursuerSpeed: 2,
   avatarSpeed: 4,
   voteWindowSec: 0.5,
   wandCountPerLevel: 5,
@@ -193,6 +193,8 @@ export class GameStore {
       let hasInput = false;
       if (s.mode === 'democracy') {
         const dir = aggregateDemocracy(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
+        // Capture tally before clearing so the UI shows what was just voted
+        s.voteTally = buildVoteTally(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
         if (dir) {
           applyDirectionToAvatar(s, dir);
           s.toursJoues++;
@@ -200,7 +202,6 @@ export class GameStore {
           // Manual mode: clear the buffer so the same vote cannot re-fire on the next tick
           if (!s.settings.autoMove) s.inputBuffer = [];
         }
-        s.voteTally = buildVoteTally(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
       } else {
         // Chaos: apply next queued direction
         const dir = consumeChaosInput(s.chaosQueue);

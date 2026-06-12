@@ -2,7 +2,7 @@
 
 > Jeu multijoueur collaboratif type *Twitch Plays Pokémon*, projeté sur les écrans d'un bar, contrôlé collectivement par les téléphones des joueurs.
 
-- **Version** : 1.5 (M4e : URL QR configurable via admin, défauts reset mis à jour, chat 19 px, flèches contrastées)
+- **Version** : 1.6 (M4f : tunnels réservés à l'avatar, baguettes espacées + hors porte, vote visible Démo seulement, vitesse poursuivants 2, texture parchemin)
 - **Date** : 11 juin 2026
 - **Statut** : 🟢 Validé, prêt à construire
 - **Design de référence** : mockup « pacman-hp » (« Pac-Mage : la carte ensorcelée »), voir §10 et `mockup-reference.png` ; maquette conceptuelle de carte 23×23 voir §6 bis et `map-concept.png`
@@ -276,13 +276,17 @@ Map {
 - **Tous les inputs entrent dans une file appliquée séquentiellement** (chaque input demande un virage à la prochaine intersection compatible). C'est l'empilement des intentions de tous les joueurs qui produit le chaos.
 
 ### 7.4 Poursuivants
-- **IA pathfinding réel** : chaque poursuivant calcule son prochain pas par **BFS** (largeur d'abord) dans le labyrinthe, en tenant compte des tunnels wraparound. 30 % de chance de déviation aléatoire par tick (comportement non déterministe). Pas de rapprochement à vol d'oiseau.
+- **IA pathfinding réel** : chaque poursuivant calcule son prochain pas par **BFS** (largeur d'abord) dans le labyrinthe. 30 % de chance de déviation aléatoire par tick (comportement non déterministe). Pas de rapprochement à vol d'oiseau.
+- **Tunnels réservés à l'avatar** : les poursuivants ne peuvent pas emprunter les ouvertures de bord (wraparound) ; ces cases sont traitées comme des impasses pour leur pathfinding et leur déplacement. Seul l'avatar traverse les tunnels.
+- **Vitesse par défaut** : 2 cases/seconde (réglable admin).
 - **Même vitesse pour tous, aucune capacité spéciale** ; vitesse **réglable** par l'animateur.
 - **Collision avatar / poursuivant = perte d'une vie** (voir §7.7).
 - Nombre de poursuivants croissant selon le niveau (§8).
 
 ### 7.5 Baguettes (collectibles — selon mode admin)
-- Si **mode collecte** activé : N **baguettes magiques** apparaissent à des **positions aléatoires** au lancement du niveau (N réglable par niveau).
+- Si **mode collecte** activé : N **baguettes magiques** apparaissent au lancement du niveau (N réglable par admin).
+- Apparition uniquement sur des **cases couloir de type 0** : jamais sur un mur, la Salle, la porte, un spawn ou le départ avatar.
+- **Espacement minimum garanti** (distance de Manhattan ≥ 4) entre chaque baguette — évite qu'elles apparaissent collées.
 - Il faut **toutes les collecter** avant que la Salle sur Demande ne valide le niveau.
 - Compteur « Baguettes X/Y » affiché (sinon cadre masqué).
 

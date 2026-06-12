@@ -270,6 +270,20 @@ body {
 // ── Constants ─────────────────────────────────────────────────────────────
 const CHAT_MAX = 50;
 
+// ── Parchment texture (sepia mode) ────────────────────────────────────────
+let _texImg = null, _texLoaded = false, _texPattern = null;
+(function () {
+  _texImg = new Image();
+  _texImg.onload = () => { _texLoaded = true; _texPattern = null; };
+  _texImg.onerror = () => { _texImg = false; };
+  _texImg.src = '/screen/assets/texture_parchemin.jpg';
+})();
+function getTexPattern() {
+  if (_texPattern) return _texPattern;
+  if (_texLoaded && _texImg) _texPattern = ctx.createPattern(_texImg, 'repeat');
+  return _texPattern;
+}
+
 // ── Parchment grain (static noise, recomputed on canvas resize) ───────────
 let _grainCanvas = null, _grainW = 0, _grainH = 0;
 function ensureGrain(w, h) {
@@ -647,11 +661,21 @@ function render() {
   ctx.fillStyle = theme.corridor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Grain texture — static paper noise visible only on corridor cells (walls drawn on top)
-  ensureGrain(canvas.width, canvas.height);
-  ctx.globalAlpha = atmo === 'parchemin' ? 0.42 : (atmo === 'chandelle' ? 0.22 : 0.12);
-  ctx.drawImage(_grainCanvas, 0, 0);
-  ctx.globalAlpha = 1.0;
+  // Corridor texture — visible only on corridors (walls/room drawn on top)
+  if (atmo === 'parchemin') {
+    const pat = getTexPattern();
+    if (pat) {
+      ctx.globalAlpha = 0.20;
+      ctx.fillStyle = pat;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1.0;
+    }
+  } else {
+    ensureGrain(canvas.width, canvas.height);
+    ctx.globalAlpha = atmo === 'chandelle' ? 0.22 : 0.12;
+    ctx.drawImage(_grainCanvas, 0, 0);
+    ctx.globalAlpha = 1.0;
+  }
 
   // ② Draw cells — only walls, room, tunnels (corridors show through)
   for (let r = 0; r < H; r++) {
@@ -754,6 +778,14 @@ function updateHUD(s) {
   const n = s.players.filter(p => p.connected).length;
   document.getElementById('players-count').textContent =
     `${n} sorcier${n > 1 ? 's' : ''} connecté${n > 1 ? 's' : ''}`;
+
+  // Vote panel: visible only in Democracy mode
+  const votePanel = document.getElementById('right-panel');
+  const showVotes = s.mode === 'democracy';
+  if ((votePanel.style.display === 'none') !== !showVotes) {
+    votePanel.style.display = showVotes ? '' : 'none';
+    lastCell = 0; // trigger canvas resize on layout change
+  }
 
   // Vote bars
   const tally = s.voteTally;

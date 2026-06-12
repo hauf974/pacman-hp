@@ -13,6 +13,7 @@ import {
   spawnPursuers,
   spawnWands,
   checkWandCollection,
+  MIN_WAND_DIST,
 } from '../src/server/gameEngine';
 import { TimedInput, MapData, GameState, Avatar, Direction } from '../src/shared/types';
 
@@ -759,6 +760,106 @@ describe('victory & game-over conditions (logic layer)', () => {
       const state = makeState(makeAvatar(0, 0, 'right'), map);
       state.level = level;
       expect(state.level >= 5).toBe(false);
+    }
+  });
+});
+
+// ─── M4f: Tunnels reserved for avatar (pursuers blocked) ─────────────────────
+
+describe('canMove — allowTunnels=false blocks tunnel exits', () => {
+  const map = makeMap([[0, 0, 0]], [0]); // row-0 horizontal tunnel
+
+  test('allowTunnels=true (default): can exit left border via tunnel', () => {
+    expect(canMove(map, 0, 0, 'left', true)).toBe(true);
+    expect(canMove(map, 0, 2, 'right', true)).toBe(true);
+  });
+
+  test('allowTunnels=false: tunnel exits treated as walls', () => {
+    expect(canMove(map, 0, 0, 'left', false)).toBe(false);
+    expect(canMove(map, 0, 2, 'right', false)).toBe(false);
+  });
+
+  test('allowTunnels=false: normal in-bounds moves still work', () => {
+    expect(canMove(map, 0, 0, 'right', false)).toBe(true);
+    expect(canMove(map, 0, 2, 'left', false)).toBe(true);
+  });
+});
+
+describe('bfsNextDir — allowTunnels=false does not route through tunnels', () => {
+  const tunnelMap = makeMap([[0, 0, 0, 0, 0]], [0]);
+
+  test('with tunnels: chooses shorter path via wraparound', () => {
+    // From col 4 to col 0: via tunnel (2 steps: right→wrap) vs direct (4 steps: left)
+    expect(bfsNextDir(tunnelMap, 0, 4, 0, 0, true)).toBe('right');
+  });
+
+  test('without tunnels: must go the long way', () => {
+    expect(bfsNextDir(tunnelMap, 0, 4, 0, 0, false)).toBe('left');
+  });
+
+  test('without tunnels: vertical tunnel also blocked', () => {
+    const vMap = makeMap([[0], [0], [0], [0], [0]], [], [0]);
+    // From row 4 to row 0: via tunnel (down→wrap, 2 steps) vs direct (up, 4 steps)
+    expect(bfsNextDir(vMap, 4, 0, 0, 0, true)).toBe('down');   // via tunnel
+    expect(bfsNextDir(vMap, 4, 0, 0, 0, false)).toBe('up');    // no tunnel
+  });
+});
+
+// ─── M4f: Wand spawning — valid cells + minimum spacing ──────────────────────
+
+describe('spawnWands — door exclusion', () => {
+  // 9-corridor row with door at c=4
+  function mapWithDoor() {
+    const m: any = makeMap([[0, 0, 0, 0, 0, 0, 0, 0, 0]]);
+    m.roomDoor = { r: 0, c: 4 };
+    return m as MapData;
+  }
+
+  test('wand never placed on door cell', () => {
+    const m = mapWithDoor();
+    for (let run = 0; run < 30; run++) {
+      const wands = spawnWands(m, 3);
+      expect(wands.every(w => !(w.r === 0 && w.c === 4))).toBe(true);
+    }
+  });
+
+  test('wands still land on corridor cells when door excluded', () => {
+    const m = mapWithDoor();
+    const wands = spawnWands(m, 3);
+    for (const w of wands) expect(m.cells[w.r][w.c]).toBe(0);
+  });
+});
+
+describe('spawnWands — minimum spacing', () => {
+  // 5-row × 10-col map: 50 corridors, plenty of room for 5 wands at MIN_DIST apart
+  const bigMap = makeMap([
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ]);
+
+  test('all wands are at least MIN_WAND_DIST apart (Manhattan)', () => {
+    const wands = spawnWands(bigMap, 5);
+    expect(wands).toHaveLength(5);
+    for (let i = 0; i < wands.length; i++) {
+      for (let j = i + 1; j < wands.length; j++) {
+        const d = Math.abs(wands[i].r - wands[j].r) + Math.abs(wands[i].c - wands[j].c);
+        expect(d).toBeGreaterThanOrEqual(MIN_WAND_DIST);
+      }
+    }
+  });
+
+  test('spacing invariant holds across multiple random runs', () => {
+    for (let run = 0; run < 10; run++) {
+      const wands = spawnWands(bigMap, 5);
+      for (let i = 0; i < wands.length; i++) {
+        for (let j = i + 1; j < wands.length; j++) {
+          const d = Math.abs(wands[i].r - wands[j].r) + Math.abs(wands[i].c - wands[j].c);
+          expect(d).toBeGreaterThanOrEqual(MIN_WAND_DIST);
+        }
+      }
     }
   });
 });
