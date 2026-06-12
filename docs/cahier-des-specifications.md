@@ -2,7 +2,7 @@
 
 > Jeu multijoueur collaboratif type *Twitch Plays Pokémon*, projeté sur les écrans d'un bar, contrôlé collectivement par les téléphones des joueurs.
 
-- **Version** : 1.3 (M4c : titre renommé « Pac-Mage : la carte ensorcelée », avatar chapeau-sorcier, poursuivants spectres encapuchonnés, porte rouge/verte selon collecte, fix déplacement manuel)
+- **Version** : 1.4 (M4d : HUD overlay in-game, chat renommé « Pattenrond », grain parchemin, fix mise en page chat toutes résolutions)
 - **Date** : 11 juin 2026
 - **Statut** : 🟢 Validé, prêt à construire
 - **Design de référence** : mockup « pacman-hp » (« Pac-Mage : la carte ensorcelée »), voir §10 et `mockup-reference.png` ; maquette conceptuelle de carte 23×23 voir §6 bis et `map-concept.png`
@@ -79,7 +79,7 @@ Trois clients web partagent le même backend :
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Pac-Mage : la carte ensorcelée ❤❤❤  │ Baguettes 2/3 │ Étage 1        │  ← barre de titre COMPACTE
+│  Pac-Mage : la carte ensorcelée                                            │  ← barre de titre (titre seul)
 ├──────────────┬──────────────────────────────────────────┬───────────┤
 │ ┌──────────┐ │                                           │  CADRE     │
 │ │ QR code  │ │                                           │  DE VOTE   │
@@ -111,8 +111,9 @@ Trois clients web partagent le même backend :
 - Animation fluide (30–60 fps côté rendu).
 - Indicateur de direction courante de l'avatar.
 
-### 4.3 Chat « Le Grand Chahut » (gauche, sous le QR)
-- Liste défilante façon Twitch : `@pseudo` + flèche d'input (↑ ↓ ← →), colonnes **compactes**.
+### 4.3 Chat « Pattenrond » (gauche, sous le QR)
+- Liste défilante façon Twitch : `@pseudo` + flèche d'input (↑ ↓ ← →), colonnes **séparées** (pseudo tronqué si nécessaire, flèche toujours visible). Police ≥ 13 px pour lisibilité à distance.
+- Entrées les plus récentes en **haut** (juste sous le titre), sans espace vide.
 - Affiche les arrivées/départs (« @x est arrivé », « @x est parti »).
 - **Tout afficher** (pas d'agrégation), y compris en mode Chaos.
 
@@ -122,10 +123,13 @@ Trois clients web partagent le même backend :
 - Pertinent surtout en mode Démocratie (suspense collectif) ; peut aussi visualiser l'activité en Chaos.
 
 ### 4.5 Barre de titre (compacte)
-- Titre « Pac-Mage : la carte ensorcelée ».
-- **Points de vie** : 3 cœurs (vies partagées).
+- Titre seul : « Pac-Mage : la carte ensorcelée ».
+
+### 4.5b HUD in-game (superposé en haut à droite de la zone de jeu)
+- **Points de vie** : 3 cœurs, grande taille, lisibles à distance, superposés sur le labyrinthe.
 - **Baguettes X/Y** (masqué si pas de collecte au niveau).
 - **Étage** (niveau 1 à 5).
+- Fond semi-transparent pour rester lisibles sur le labyrinthe.
 
 ### 4.6 États d'écran
 - **Lobby / attente** : QR en avant, liste des connectés, « En attente du lancement par l'animateur ».
@@ -447,7 +451,7 @@ GameState {
 - [ ] L'admin : lancer/réinitialiser, mode, durée de vote, objectif, nb baguettes, vitesses, tempo, ambiance, modération.
 - [ ] **5 niveaux** avec le bon nombre de poursuivants ; progression par la Salle sur Demande.
 - [ ] Message final « L'Armée de Dumbledore vaincra ! » après le niveau 5.
-- [ ] Chat « Le Grand Chahut » compact, défile, arrivées/départs.
+- [ ] Chat « Pattenrond » : polices lisibles à distance, colonnes pseudo/flèche séparées, entrées récentes en haut.
 - [ ] **Robustesse mobile** : changer d'app / verrouiller / revenir et continuer.
 - [ ] Pause auto si 0 joueur.
 - [ ] **Éditeur de cartes** : créer/dessiner, nommer, dupliquer, supprimer, sélectionner la carte active ; placer murs, Salle (pièce), départ avatar, spawns poursuivants.

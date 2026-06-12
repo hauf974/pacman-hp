@@ -81,12 +81,23 @@ body {
   text-shadow: 1px 1px 3px rgba(0,0,0,0.35);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#lives { display: flex; gap: 3px; font-size: 20px; flex-shrink: 0; }
+/* ── In-game HUD overlay ─────────────────────────────────────────────────── */
+#hud-overlay {
+  position: absolute; top: 10px; right: 10px;
+  z-index: 5;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
+  pointer-events: none;
+}
+#lives {
+  font-size: 30px; line-height: 1;
+  text-shadow: 2px 2px 6px rgba(0,0,0,0.85);
+}
 #wands-display, #level-display {
-  font-size: 14px; color: var(--text);
-  background: rgba(0,0,0,0.20); padding: 2px 10px;
-  border-radius: 4px; border: 1px solid var(--border);
-  white-space: nowrap; flex-shrink: 0;
+  font-size: 18px; color: var(--text-bright);
+  background: rgba(0,0,0,0.55); padding: 3px 12px;
+  border-radius: 5px; border: 1px solid var(--border);
+  white-space: nowrap;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
 }
 
 /* ── Main area ───────────────────────────────────────────────────────────── */
@@ -116,22 +127,29 @@ body {
 #players-count { font-size: 11px; color: var(--text-bright); margin-top: 3px; }
 
 #chat-title {
-  font-size: 11px; font-weight: bold; color: var(--text-bright);
+  font-size: 12px; font-weight: bold; color: var(--text-bright);
   letter-spacing: 1px; border-top: 1px solid var(--border); padding-top: 5px;
   flex-shrink: 0;
 }
 #chat-list {
   flex: 1; overflow: hidden; display: flex;
-  flex-direction: column-reverse; gap: 1px;
+  flex-direction: column; gap: 2px;
 }
 .chat-line {
-  font-size: 10px; color: var(--text-dim);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.45;
+  font-size: 13px; color: var(--text-dim);
+  display: flex; align-items: center; gap: 5px;
+  line-height: 1.45; min-height: 0; overflow: hidden;
 }
-.chat-line .pseudo { color: var(--text-bright); }
-.chat-line .dir    { color: var(--accent); font-weight: bold; }
-.chat-line.join    { color: var(--join-color); }
-.chat-line.leave   { color: var(--leave-color); }
+.chat-line .pseudo {
+  color: var(--text-bright);
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chat-line .dir { color: var(--accent); font-weight: bold; font-size: 15px; flex-shrink: 0; }
+.chat-line.join  { display: block; color: var(--join-color);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-line.leave { display: block; color: var(--leave-color);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Game zone ───────────────────────────────────────────────────────────── */
 #game-zone {
@@ -184,9 +202,6 @@ body {
 <!-- Title bar -->
 <div id="titlebar">
   <div id="title-text">Pac-Mage : la carte ensorcelée</div>
-  <div id="lives"></div>
-  <div id="wands-display" style="display:none"></div>
-  <div id="level-display">Étage 1</div>
 </div>
 
 <!-- Main layout -->
@@ -200,13 +215,18 @@ body {
       <div id="qr-subtitle">Scannez le sceau pour aider nos amis à rejoindre la salle sur demande</div>
       <div id="players-count">0 sorcier connecté</div>
     </div>
-    <div id="chat-title">Le Grand Chahut</div>
+    <div id="chat-title">Pattenrond</div>
     <div id="chat-list"></div>
   </div>
 
-  <!-- Center: canvas + overlay -->
+  <!-- Center: canvas + HUD overlay + overlay -->
   <div id="game-zone">
     <canvas id="game-canvas"></canvas>
+    <div id="hud-overlay">
+      <div id="lives"></div>
+      <div id="wands-display" style="display:none"></div>
+      <div id="level-display">Étage 1</div>
+    </div>
     <div id="overlay">
       <div id="overlay-title"></div>
       <div id="overlay-sub"></div>
@@ -245,6 +265,24 @@ body {
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────
 const CHAT_MAX = 50;
+
+// ── Parchment grain (static noise, recomputed on canvas resize) ───────────
+let _grainCanvas = null, _grainW = 0, _grainH = 0;
+function ensureGrain(w, h) {
+  if (_grainCanvas && _grainW === w && _grainH === h) return;
+  _grainCanvas = document.createElement('canvas');
+  _grainCanvas.width = w; _grainCanvas.height = h;
+  _grainW = w; _grainH = h;
+  const gc = _grainCanvas.getContext('2d');
+  const img = gc.createImageData(w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = (Math.random() * 50) | 0;
+    d[i] = d[i + 1] = d[i + 2] = v;
+    d[i + 3] = Math.random() < 0.28 ? ((8 + Math.random() * 18) | 0) : 0;
+  }
+  gc.putImageData(img, 0, 0);
+}
 
 // Colour themes (canvas palette)
 const THEMES = {
@@ -604,6 +642,12 @@ function render() {
   // ① Fill entire canvas with corridor/parchment colour
   ctx.fillStyle = theme.corridor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grain texture — static paper noise visible only on corridor cells (walls drawn on top)
+  ensureGrain(canvas.width, canvas.height);
+  ctx.globalAlpha = atmo === 'parchemin' ? 0.42 : (atmo === 'chandelle' ? 0.22 : 0.12);
+  ctx.drawImage(_grainCanvas, 0, 0);
+  ctx.globalAlpha = 1.0;
 
   // ② Draw cells — only walls, room, tunnels (corridors show through)
   for (let r = 0; r < H; r++) {
