@@ -199,6 +199,26 @@ describe('chaosQueue cap', () => {
   });
 });
 
+// ── autoMove=false: one press = one step ──────────────────────────────────────
+
+describe('autoMove=false: manual movement (one input = one step)', () => {
+  test('Democracy: single input moves avatar at most once (buffer cleared after consumption)', () => {
+    const gs = makeStore();
+    startStore(gs, 's1', 'Tester', 't1');
+    gs.setSettings({ autoMove: false, voteWindowSec: 3 });
+
+    const before = gs.getPublicState().avatar;
+    gs.playerInput('s1', 'left');
+
+    // 8 ticks × 100 ms = 800 ms — enough for 3 avatar periods at default speed 4 (250 ms each)
+    for (let i = 0; i < 8; i++) gs.tick(100);
+
+    const after = gs.getPublicState().avatar;
+    const steps = Math.abs(after.r - before.r) + Math.abs(after.c - before.c);
+    expect(steps).toBeLessThanOrEqual(1);
+  });
+});
+
 // ── reset() clears cleanup timers ─────────────────────────────────────────────
 
 describe('reset() cleans up timers', () => {

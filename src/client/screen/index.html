@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>La Carte Ensorcelée</title>
+<title>Pac-Mage : la carte ensorcelée</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=Cinzel:wght@700&family=Uncial+Antiqua&display=swap" rel="stylesheet">
@@ -27,8 +27,8 @@
 [data-atmo="chandelle"] {
   --bg:          #120700;
   --bg-panel:    rgba(18,7,0,0.96);
-  --wall:        #0a0400;
-  --wall-hi:     #2a1000;
+  --wall:        #3a1000;
+  --wall-hi:     #7a3200;
   --canvas-bg:   #100600;
   --text:        #e8a030;
   --text-dim:    #8b5010;
@@ -183,7 +183,7 @@ body {
 
 <!-- Title bar -->
 <div id="titlebar">
-  <div id="title-text">La Carte Ensorcelée</div>
+  <div id="title-text">Pac-Mage : la carte ensorcelée</div>
   <div id="lives"></div>
   <div id="wands-display" style="display:none"></div>
   <div id="level-display">Étage 1</div>
@@ -256,18 +256,18 @@ const THEMES = {
     avatarFill: '#2a1400', avatarGlow: 'rgba(190,145,55,0.35)',
     avatarMouth: '#c9a850',
     footFill: 'rgba(42,20,0,{a})',
-    wandFill: '#c8900a', wandGlow: 'rgba(220,160,20,0.6)',
+    wandFill: '#1890ff', wandGlow: 'rgba(24,144,255,0.6)',
     pursuerGlowMul: 0.22,
   },
   chandelle: {
-    corridor: '#0e0600', wall: '#0a0300', wallHi: '#2a1000',
+    corridor: '#0e0600', wall: '#3a1000', wallHi: '#7a3200',
     roomBg: '#082808', roomBorder: '#208020',
     doorBase: '#28b828', doorArch: '#104010',
     tunnelBg: 'rgba(60,10,110,{a})', tunnelBorder: 'rgba(160,60,255,{a})',
     avatarFill: '#e8a030', avatarGlow: 'rgba(232,160,48,0.5)',
     avatarMouth: '#0e0600',
     footFill: 'rgba(232,160,48,{a})',
-    wandFill: '#ffcc20', wandGlow: 'rgba(255,200,30,0.7)',
+    wandFill: '#00e0cc', wandGlow: 'rgba(0,224,204,0.6)',
     pursuerGlowMul: 0.38,
   },
   sortilege: {
@@ -278,17 +278,17 @@ const THEMES = {
     avatarFill: '#b060ff', avatarGlow: 'rgba(180,80,255,0.5)',
     avatarMouth: '#09031a',
     footFill: 'rgba(180,100,255,{a})',
-    wandFill: '#a040ff', wandGlow: 'rgba(160,80,255,0.7)',
+    wandFill: '#60e0ff', wandGlow: 'rgba(96,224,255,0.6)',
     pursuerGlowMul: 0.38,
   },
 };
 
 const PURSUER_COLORS = {
-  rusard:      '#d46010', // Filch — amber brown
-  missteigne:  '#c040a0', // Mrs Norris — purple-rose
-  rogue:       '#2040b0', // Snape — deep blue
-  peeves:      '#18c018', // Peeves — bright green
-  baronsanglant: '#c0c0c0', // Bloody Baron — silver
+  rusard:        '#7a3008',
+  missteigne:    '#6a1858',
+  rogue:         '#102268',
+  peeves:        '#0a7018',
+  baronsanglant: '#505060',
 };
 
 const PURSUER_GLOW = {
@@ -409,197 +409,160 @@ function drawWand(x, y, cell, theme) {
 function drawDoor(dx, dy, cell, theme, accessible) {
   const t = Date.now();
   const pulse = 0.5 + 0.5 * Math.sin(t / 450);
-  const a = accessible ? (0.65 + pulse * 0.35).toFixed(2) : '0.45';
-  // Arch body
-  ctx.fillStyle = `rgba(40,180,40,${a})`;
+  if (accessible) {
+    const a = (0.65 + pulse * 0.35).toFixed(2);
+    ctx.fillStyle = `rgba(40,180,40,${a})`;
+    ctx.strokeStyle = `rgba(100,255,100,${a})`;
+  } else {
+    const a = (0.55 + pulse * 0.20).toFixed(2);
+    ctx.fillStyle = `rgba(180,40,40,${a})`;
+    ctx.strokeStyle = `rgba(255,100,100,${a})`;
+  }
   ctx.beginPath();
   ctx.arc(dx + cell / 2, dy + cell * 0.55, cell * 0.38, Math.PI, 0);
   ctx.lineTo(dx + cell * 0.88, dy + cell * 0.88);
   ctx.lineTo(dx + cell * 0.12, dy + cell * 0.88);
   ctx.closePath();
   ctx.fill();
-  // Arch outline
-  ctx.strokeStyle = `rgba(100,255,100,${a})`;
   ctx.lineWidth = Math.max(1, cell * 0.09);
   ctx.stroke();
 }
 
-// ── Draw: pursuer ─────────────────────────────────────────────────────────
+// ── Draw: pursuer (ombre encapuchonnée) ──────────────────────────────────────
 function drawPursuer(p, cell, theme) {
   const x = p.c * cell + cell / 2;
   const y = p.r * cell + cell / 2;
-  const color = PURSUER_COLORS[p.type] || '#ff4444';
-  const glow  = PURSUER_GLOW[p.type]  || '#ff8888';
+  const fillColor = PURSUER_COLORS[p.type] || '#444444';
+  const glowColor = PURSUER_GLOW[p.type]  || '#888888';
   const r = cell * 0.40;
   const t = Date.now();
+  const fl = Math.sin(t / 600 + p.c * 0.8) * r * 0.08;
 
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = cell * (0.25 + theme.pursuerGlowMul * (0.5 + 0.5 * Math.sin(t / 500 + p.c)));
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur = cell * (0.28 + theme.pursuerGlowMul * (0.6 + 0.4 * Math.sin(t / 500 + p.c)));
+  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = fillColor;
 
-  // Ghost body
-  ctx.fillStyle = color;
+  const shoulderLy = y - r * 0.28 + fl;
+  const hemY = y + r * 0.84 + fl;
+
   ctx.beginPath();
-  ctx.arc(x, y - cell * 0.04, r, Math.PI, 0);
-  // Wavy skirt
-  const waves = 3;
-  const skirtY = y + r * 0.55;
-  for (let i = 0; i < waves; i++) {
-    const wx = x - r + (r * 2 / waves) * (i + 0.5);
-    ctx.arc(wx, skirtY, r / waves, 0, Math.PI, i % 2 !== 0);
-  }
-  ctx.closePath();
+  ctx.moveTo(x, y - r * 1.18 + fl);
+  ctx.quadraticCurveTo(x - r * 0.60, y - r * 0.82 + fl, x - r * 0.52, shoulderLy);
+  ctx.lineTo(x - r * 0.70, hemY);
+  ctx.quadraticCurveTo(x - r * 0.35, hemY + r * 0.18, x, hemY + r * 0.04);
+  ctx.quadraticCurveTo(x + r * 0.35, hemY + r * 0.18, x + r * 0.70, hemY);
+  ctx.lineTo(x + r * 0.52, shoulderLy);
+  ctx.quadraticCurveTo(x + r * 0.60, y - r * 0.82 + fl, x, y - r * 1.18 + fl);
   ctx.fill();
-
-  // Distinctive top feature per character (drawn OVER the body)
-  drawPursuerTop(p.type, x, y, r, color, cell, t);
-
+  ctx.globalAlpha = 1.0;
   ctx.shadowBlur = 0;
 
-  // Eyes
-  const ey = y - r * 0.18;
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(x - r * 0.30, ey, r * 0.24, 0, Math.PI * 2);
-  ctx.arc(x + r * 0.30, ey, r * 0.24, 0, Math.PI * 2);
-  ctx.fill();
-  // Pupils (track movement direction)
-  const { dc, dr } = dirDelta(p.dir);
-  const poff = r * 0.09;
-  ctx.fillStyle = (p.type === 'peeves') ? '#ff0000' : '#2244cc';
-  ctx.beginPath();
-  ctx.arc(x - r * 0.30 + dc * poff, ey + dr * poff, r * 0.12, 0, Math.PI * 2);
-  ctx.arc(x + r * 0.30 + dc * poff, ey + dr * poff, r * 0.12, 0, Math.PI * 2);
-  ctx.fill();
-}
+  const eyeY = y - r * 0.52 + fl;
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur = cell * 0.28;
+  ctx.fillStyle = glowColor;
+  if (p.type === 'missteigne') {
+    ctx.beginPath();
+    ctx.ellipse(x - r * 0.22, eyeY, r * 0.14, r * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + r * 0.22, eyeY, r * 0.14, r * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.ellipse(x - r * 0.22, eyeY, r * 0.12, r * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + r * 0.22, eyeY, r * 0.12, r * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
 
-function drawPursuerTop(type, x, y, r, color, cell, t) {
-  switch (type) {
+  switch (p.type) {
     case 'rusard': {
-      // Cat ears (Filch with Mrs Norris)
-      ctx.fillStyle = color;
+      ctx.fillStyle = fillColor;
       ctx.beginPath();
-      ctx.moveTo(x - r * 0.55, y - r * 0.85);
-      ctx.lineTo(x - r * 0.25, y - r * 1.30);
-      ctx.lineTo(x + r * 0.05, y - r * 0.85);
+      ctx.moveTo(x - r * 0.30, y - r * 1.06 + fl);
+      ctx.lineTo(x - r * 0.18, y - r * 1.32 + fl);
+      ctx.lineTo(x - r * 0.06, y - r * 1.06 + fl);
       ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(x + r * 0.05, y - r * 0.85);
-      ctx.lineTo(x + r * 0.35, y - r * 1.30);
-      ctx.lineTo(x + r * 0.65, y - r * 0.85);
-      ctx.fill();
-      // Inner ear
-      ctx.fillStyle = '#ff9060';
-      ctx.beginPath();
-      ctx.moveTo(x - r * 0.48, y - r * 0.88);
-      ctx.lineTo(x - r * 0.25, y - r * 1.18);
-      ctx.lineTo(x - r * 0.02, y - r * 0.88);
-      ctx.fill();
-      break;
-    }
-    case 'missteigne': {
-      // Pointed witch-hat brim (tiny)
-      ctx.fillStyle = color;
-      const hx = x, hy = y - r;
-      ctx.beginPath();
-      ctx.moveTo(hx, hy - r * 0.85);
-      ctx.lineTo(hx - r * 0.42, hy);
-      ctx.lineTo(hx + r * 0.42, hy);
-      ctx.closePath();
-      ctx.fill();
-      // Brim line
-      ctx.fillStyle = '#e080c0';
-      ctx.beginPath();
-      ctx.ellipse(hx, hy, r * 0.5, r * 0.12, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    }
-    case 'rogue': {
-      // Tall angular hood (Snape's pointed look)
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(x - r * 0.38, y - r * 0.88);
-      ctx.lineTo(x, y - r * 1.50);
-      ctx.lineTo(x + r * 0.38, y - r * 0.88);
-      ctx.closePath();
-      ctx.fill();
-      break;
-    }
-    case 'peeves': {
-      // Jester bumps — two little spheres
-      const bumpT = 0.5 + 0.5 * Math.sin(t / 200);
-      ctx.fillStyle = '#20e020';
-      ctx.beginPath();
-      ctx.arc(x - r * 0.30, y - r * 0.95 - bumpT * r * 0.12, r * 0.20, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(x + r * 0.30, y - r * 0.95 - bumpT * r * 0.12, r * 0.20, 0, Math.PI * 2);
+      ctx.moveTo(x + r * 0.06, y - r * 1.06 + fl);
+      ctx.lineTo(x + r * 0.18, y - r * 1.32 + fl);
+      ctx.lineTo(x + r * 0.30, y - r * 1.06 + fl);
       ctx.fill();
       break;
     }
     case 'baronsanglant': {
-      // Crown spikes (Bloody Baron)
-      ctx.fillStyle = '#d8d8d8';
-      ctx.lineWidth = Math.max(1, cell * 0.05);
-      ctx.strokeStyle = '#909090';
-      for (let i = -1; i <= 1; i++) {
-        ctx.beginPath();
-        ctx.moveTo(x + i * r * 0.40 - r * 0.12, y - r * 0.88);
-        ctx.lineTo(x + i * r * 0.40, y - r * 1.30);
-        ctx.lineTo(x + i * r * 0.40 + r * 0.12, y - r * 0.88);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      }
-      // Chains: small dots along sides
-      ctx.fillStyle = 'rgba(180,180,200,0.7)';
+      ctx.fillStyle = glowColor;
+      ctx.globalAlpha = 0.55;
       for (let i = 0; i < 3; i++) {
+        const cy = shoulderLy + (hemY - shoulderLy) * (i + 0.5) / 3;
         ctx.beginPath();
-        ctx.arc(x + r * 0.55, y - r * 0.2 + i * r * 0.35, r * 0.07, 0, Math.PI * 2);
+        ctx.arc(x + r * 0.62, cy, r * 0.055, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x - r * 0.62, cy, r * 0.055, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.globalAlpha = 1.0;
+      break;
+    }
+    case 'peeves': {
+      const spark = 0.5 + 0.5 * Math.sin(t / 120);
+      ctx.fillStyle = glowColor;
+      ctx.globalAlpha = 0.7 * spark;
+      ctx.beginPath();
+      ctx.arc(x + r * (0.75 + spark * 0.15), y + (-0.20 + spark * 0.30) * r + fl, r * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
       break;
     }
   }
 }
 
-// ── Draw: avatar (Le Vagabond) ────────────────────────────────────────────
+// ── Draw: avatar (chapeau de sorcier) ────────────────────────────────────────
 function drawAvatar(avatar, cell, theme) {
   const x = avatar.c * cell + cell / 2;
   const y = avatar.r * cell + cell / 2;
-  const angle = DIR_ANGLE[avatar.dir] ?? 0;
   const t = Date.now();
-  // Animated mouth: full open → closed → full open (tempo-scaled)
-  const mouthAnim = 0.25 + 0.20 * Math.abs(Math.sin(t / 90));
+  const r = cell * 0.42;
 
   ctx.shadowColor = theme.avatarGlow;
   ctx.shadowBlur = cell * 0.5;
-
   ctx.fillStyle = theme.avatarFill;
+
+  // Brim
   ctx.beginPath();
-  ctx.arc(x, y, cell * 0.42, angle + mouthAnim, angle + Math.PI * 2 - mouthAnim);
-  ctx.lineTo(x, y);
+  ctx.ellipse(x, y + r * 0.32, r * 0.92, r * 0.28, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cone body
+  ctx.beginPath();
+  ctx.moveTo(x - r * 0.42, y + r * 0.22);
+  ctx.bezierCurveTo(x - r * 0.20, y - r * 0.10, x - r * 0.10, y - r * 0.72, x, y - r * 0.92);
+  ctx.bezierCurveTo(x + r * 0.10, y - r * 0.72, x + r * 0.20, y - r * 0.10, x + r * 0.42, y + r * 0.22);
   ctx.closePath();
   ctx.fill();
 
-  // Highlight ring (thin lighter arc at top)
-  ctx.strokeStyle = theme.avatarGlow.replace('0.35', '0.5');
-  ctx.lineWidth = Math.max(1, cell * 0.06);
+  // Brim highlight arc
+  ctx.strokeStyle = theme.avatarGlow.replace(/,[\d.]+\)/, ',0.55)');
+  ctx.lineWidth = Math.max(1, cell * 0.055);
   ctx.beginPath();
-  ctx.arc(x, y, cell * 0.42, angle + mouthAnim, angle + Math.PI * 2 - mouthAnim);
+  ctx.ellipse(x, y + r * 0.32, r * 0.92, r * 0.28, 0, Math.PI * 1.07, Math.PI * 1.93);
   ctx.stroke();
 
   ctx.shadowBlur = 0;
 
-  // Eye
-  const eyeA = angle - Math.PI / 4;
-  ctx.fillStyle = theme.avatarMouth;
+  // Hat band (contrasting accent)
+  ctx.strokeStyle = theme.wandFill;
+  ctx.lineWidth = Math.max(1, cell * 0.065);
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.arc(
-    x + Math.cos(eyeA) * cell * 0.20,
-    y + Math.sin(eyeA) * cell * 0.20,
-    cell * 0.07, 0, Math.PI * 2,
-  );
-  ctx.fill();
+  ctx.moveTo(x - r * 0.37, y + r * 0.08);
+  ctx.lineTo(x + r * 0.37, y + r * 0.08);
+  ctx.stroke();
 
   // Queued direction hint: small pulsing dot ahead
   if (avatar.queuedDir) {

@@ -2,10 +2,10 @@
 
 > Jeu multijoueur collaboratif type *Twitch Plays Pokémon*, projeté sur les écrans d'un bar, contrôlé collectivement par les téléphones des joueurs.
 
-- **Version** : 1.2 (corrections M2.5 : plein écran adaptatif, déplacement auto optionnel, salle = porte unique, IA pathfinding, murs de contour + tunnels visibles)
+- **Version** : 1.3 (M4c : titre renommé « Pac-Mage : la carte ensorcelée », avatar chapeau-sorcier, poursuivants spectres encapuchonnés, porte rouge/verte selon collecte, fix déplacement manuel)
 - **Date** : 11 juin 2026
 - **Statut** : 🟢 Validé, prêt à construire
-- **Design de référence** : mockup « pacman-hp » (« La Carte Ensorcelée »), voir §10 et `mockup-reference.png` ; maquette conceptuelle de carte 23×23 voir §6 bis et `map-concept.png`
+- **Design de référence** : mockup « pacman-hp » (« Pac-Mage : la carte ensorcelée »), voir §10 et `mockup-reference.png` ; maquette conceptuelle de carte 23×23 voir §6 bis et `map-concept.png`
 
 ---
 
@@ -79,7 +79,7 @@ Trois clients web partagent le même backend :
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  La Carte Ensorcelée            ❤❤❤  │ Baguettes 2/3 │ Étage 1        │  ← barre de titre COMPACTE
+│  Pac-Mage : la carte ensorcelée ❤❤❤  │ Baguettes 2/3 │ Étage 1        │  ← barre de titre COMPACTE
 ├──────────────┬──────────────────────────────────────────┬───────────┤
 │ ┌──────────┐ │                                           │  CADRE     │
 │ │ QR code  │ │                                           │  DE VOTE   │
@@ -98,7 +98,7 @@ Trois clients web partagent le même backend :
 
 **Corrections design appliquées (vs mockup) :**
 - **Barre de titre réduite** : moins haute, prend moins de place verticale.
-- **Sous-titre supprimé** (« Le labyrinthe des spectres »). On garde le titre « La Carte Ensorcelée ».
+- **Sous-titre supprimé** (« Le labyrinthe des spectres »). Titre affiché : **« Pac-Mage : la carte ensorcelée »**.
 - **« Trésor / 100 » remplacé par « Baguettes X/Y »** (ex. `2/3`). **Ce cadre n'apparaît pas** si le niveau n'a pas de baguettes à collecter.
 - **Chat resserré** : supprimer l'espace perdu entre le pseudo et la flèche d'input (colonnes compactes).
 - **Cadre de vote déplacé** : du bas vers la **droite de la zone de jeu**, en vertical, pour **maximiser la carte**. La phrase « Le peuple dirige le Vagabond » est **supprimée**.
@@ -122,7 +122,7 @@ Trois clients web partagent le même backend :
 - Pertinent surtout en mode Démocratie (suspense collectif) ; peut aussi visualiser l'activité en Chaos.
 
 ### 4.5 Barre de titre (compacte)
-- Titre « La Carte Ensorcelée ».
+- Titre « Pac-Mage : la carte ensorcelée ».
 - **Points de vie** : 3 cœurs (vies partagées).
 - **Baguettes X/Y** (masqué si pas de collecte au niveau).
 - **Étage** (niveau 1 à 5).
@@ -272,7 +272,7 @@ Map {
 
 ### 7.6 Salle sur Demande (objectif)
 - **Petite pièce** (zone ouverte de plusieurs cases) définie dans la grille ; **position fixe** sur la carte active.
-- **Porte unique** : l'accès à la pièce ne se fait que par **une seule case « porte »** (`roomDoor` dans le format de carte) — le reste du contour de la pièce est mur. La porte est visuellement distincte (arche verte sur `/screen`).
+- **Porte unique** : l'accès à la pièce ne se fait que par **une seule case « porte »** (`roomDoor` dans le format de carte) — le reste du contour de la pièce est mur. La porte est visuellement distincte (arche) : **verte** si franchissable, **rouge** si l'accès est bloqué (mode collecte + baguettes restantes).
 - Franchir la porte **termine le niveau** (à condition d'avoir collecté toutes les baguettes si mode collecte).
 
 ### 7.7 Vies, victoire, défaite
@@ -365,7 +365,7 @@ GameState {
 
 ## 10. Design de référence et assets
 
-**Référence visuelle** : mockup « pacman-hp » / « La Carte Ensorcelée » (capture dans `mockup-reference.png`). Style **parchemin vieilli, encre sépia/bordeaux, typographie gothique** (UnifrakturCook pour le titre). Rendu **pro** attendu, fidèle au mockup, avec les corrections du §4.1.
+**Référence visuelle** : mockup « pacman-hp » / « Pac-Mage : la carte ensorcelée » (capture dans `mockup-reference.png`). Style **parchemin vieilli, encre sépia/bordeaux, typographie gothique** (UnifrakturCook pour le titre). Rendu **pro** attendu, fidèle au mockup, avec les corrections du §4.1.
 
 **Usage privé** : on peut **reprendre des assets de l'IP Harry Potter** (noms et personnages).
 

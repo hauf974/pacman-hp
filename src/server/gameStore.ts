@@ -197,6 +197,8 @@ export class GameStore {
           applyDirectionToAvatar(s, dir);
           s.toursJoues++;
           hasInput = true;
+          // Manual mode: clear the buffer so the same vote cannot re-fire on the next tick
+          if (!s.settings.autoMove) s.inputBuffer = [];
         }
         s.voteTally = buildVoteTally(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
       } else {
