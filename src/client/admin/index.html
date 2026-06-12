@@ -184,6 +184,20 @@
   </div>
 </div>
 
+<!-- QR / URL de la manette -->
+<div class="section">
+  <h2>URL de la manette (QR code)</h2>
+  <div class="control-row">
+    <label>URL de jeu</label>
+    <input type="text" id="play-url-input" placeholder="https://pacmage.ltn.re/play" style="width:320px; font-family:monospace; font-size:13px" />
+    <button class="btn" onclick="applyPlayUrl()">Appliquer</button>
+    <button class="btn" onclick="resetPlayUrl()" title="Remettre la valeur par défaut (PUBLIC_URL)">↺ Défaut</button>
+  </div>
+  <div style="font-size:12px; color:#806040; margin-top:4px; padding-left:172px">
+    URL active : <span id="current-play-url" style="color:#c8a96e; font-family:monospace; word-break:break-all">—</span>
+  </div>
+</div>
+
 <!-- Settings -->
 <div class="section">
   <h2>Réglages</h2>
@@ -198,20 +212,20 @@
 
   <div class="control-row">
     <label>Fenêtre de vote (sec)</label>
-    <input type="number" id="set-vote-window" min="0.1" max="10" step="0.1" value="3" onchange="sendSettings()" style="width:80px" />
+    <input type="number" id="set-vote-window" min="0.1" max="10" step="0.1" value="0.5" onchange="sendSettings()" style="width:80px" />
   </div>
 
   <div class="control-row">
     <label>Objectif</label>
     <select id="set-objective" onchange="sendSettings()">
       <option value="room">Atteindre la Salle</option>
-      <option value="collect">Collecter baguettes + Salle</option>
+      <option value="collect" selected>Collecter baguettes + Salle</option>
     </select>
   </div>
 
   <div class="control-row">
     <label>Baguettes par niveau</label>
-    <input type="number" id="set-wands" min="1" max="20" value="3" onchange="sendSettings()" style="width:80px" />
+    <input type="number" id="set-wands" min="1" max="20" value="5" onchange="sendSettings()" style="width:80px" />
   </div>
 
   <div class="control-row">
@@ -228,7 +242,7 @@
     <label>Déplacement automatique</label>
     <select id="set-auto-move" onchange="sendSettings()">
       <option value="true">Activé (avance en continu)</option>
-      <option value="false">Désactivé (1 case par input)</option>
+      <option value="false" selected>Désactivé (1 case par input)</option>
     </select>
   </div>
 
@@ -275,7 +289,7 @@
     <label>Traînées de pas</label>
     <select id="set-footprints" onchange="sendSettings()">
       <option value="false">Désactivées</option>
-      <option value="true">Activées (empreintes)</option>
+      <option value="true" selected>Activées (empreintes)</option>
     </select>
   </div>
 
@@ -385,6 +399,11 @@ socket.on('connect', () => {
   if (savedSecret) { doAuth(savedSecret); }
 });
 
+socket.on('qr:updated', ({ url }) => {
+  document.getElementById('play-url-input').value = url;
+  document.getElementById('current-play-url').textContent = url;
+});
+
 socket.on('state:update', (s) => {
   currentState = s;
   updateUI(s);
@@ -409,6 +428,18 @@ function doAuth(secret) {
 function send(event, data) {
   if (!authed) { alert('Authentifiez-vous d\'abord'); return; }
   socket.emit(event, data || {});
+}
+
+function applyPlayUrl() {
+  if (!authed) { alert('Authentifiez-vous d\'abord'); return; }
+  const url = document.getElementById('play-url-input').value.trim();
+  if (!url) return;
+  socket.emit('admin:setPlayUrl', { url });
+}
+
+function resetPlayUrl() {
+  if (!authed) { alert('Authentifiez-vous d\'abord'); return; }
+  socket.emit('admin:setPlayUrl', { url: '' });
 }
 
 function sendMode() {

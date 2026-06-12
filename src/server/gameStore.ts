@@ -31,12 +31,12 @@ const DEFAULT_SETTINGS: GameSettings = {
   tempo: 'anime',
   atmosphere: 'parchemin',
   titleFont: 'UnifrakturCook',
-  footprints: false,
+  footprints: true,
   pursuerSpeed: 3,
   avatarSpeed: 4,
-  voteWindowSec: 3,
-  wandCountPerLevel: 3,
-  autoMove: true,
+  voteWindowSec: 0.5,
+  wandCountPerLevel: 5,
+  autoMove: false,
   startingLevel: 1,
 };
 
@@ -64,7 +64,7 @@ function createInitialState(mapName = 'pacman'): GameState {
   return {
     status: 'lobby',
     mode: 'democracy',
-    objectiveMode: 'room',
+    objectiveMode: 'collect',
     level: 1,
     lives: 3,
     activeMap: map,

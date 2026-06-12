@@ -2,7 +2,7 @@
 
 > Jeu multijoueur collaboratif type *Twitch Plays Pokémon*, projeté sur les écrans d'un bar, contrôlé collectivement par les téléphones des joueurs.
 
-- **Version** : 1.4 (M4d : HUD overlay in-game, chat renommé « Pattenrond », grain parchemin, fix mise en page chat toutes résolutions)
+- **Version** : 1.5 (M4e : URL QR configurable via admin, défauts reset mis à jour, chat 19 px, flèches contrastées)
 - **Date** : 11 juin 2026
 - **Statut** : 🟢 Validé, prêt à construire
 - **Design de référence** : mockup « pacman-hp » (« Pac-Mage : la carte ensorcelée »), voir §10 et `mockup-reference.png` ; maquette conceptuelle de carte 23×23 voir §6 bis et `map-concept.png`
@@ -170,9 +170,21 @@ Console privée, **non projetée**, protégée par secret.
 **Pilotage de partie**
 - Créer / lancer / réinitialiser / pause-reprise.
 - **Mode de contrôle** : Démocratie ou Chaos.
-- **Durée d'un vote** (fenêtre d'agrégation Démocratie), en secondes (ex. mockup : 4,5 s ; plage ~0,5–10 s).
+- **Durée d'un vote** (fenêtre d'agrégation Démocratie), en secondes (plage 0,1–10 s, pas 0,1 s).
 - **Niveau de départ** (démo / reprise).
 - Forcer transition de niveau / game over / victoire (contrôle manuel d'animation).
+
+**URL de la manette (QR code)**
+- URL par défaut : `https://pacmage.ltn.re/play` (var d'env `PUBLIC_URL`).
+- L'admin peut saisir une URL de base personnalisée (ex. IP du serveur de dev) ; le QR se régénère immédiatement.
+- Bouton « ↺ Défaut » remet l'URL à la valeur `PUBLIC_URL`.
+
+**Valeurs par défaut au reset**
+- Mode : Démocratie, fenêtre de vote 0,5 s.
+- Objectif : collecter les baguettes + Salle sur Demande.
+- 5 baguettes par niveau.
+- Déplacement automatique : désactivé (1 case par input).
+- Traînées de pas : activées.
 
 **Réglages de jeu (ex-« Tweaks » du mockup, déplacés ici)**
 - **Mode objectif** : « atteindre la Salle sur Demande » **ou** « collecter N baguettes puis Salle sur Demande ».

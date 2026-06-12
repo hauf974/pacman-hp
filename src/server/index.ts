@@ -11,7 +11,8 @@ import { Direction, GameSettings, MapData, MapGenParams } from '../shared/types'
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? 'pacmage-admin';
-const PUBLIC_URL = process.env.PUBLIC_URL ?? `http://localhost:${PORT}`;
+const PUBLIC_URL = process.env.PUBLIC_URL ?? 'https://pacmage.ltn.re';
+let activePlayUrl = PUBLIC_URL.replace(/\/$/, '') + '/play';
 
 const app = express();
 // Trust the first proxy (Nginx Proxy Manager) so that req.ip and protocol are correct
@@ -29,12 +30,12 @@ app.use('/screen', express.static(path.join(__dirname, '../../src/client/screen'
 app.use('/play', express.static(path.join(__dirname, '../../src/client/play')));
 app.use('/admin', express.static(path.join(__dirname, '../../src/client/admin')));
 
-// QR code endpoint
+// QR code endpoint — uses activePlayUrl (changeable from admin)
 app.get('/qr.png', async (req, res) => {
   try {
-    const url = `${PUBLIC_URL}/play`;
-    const buf = await QRCode.toBuffer(url, { width: 300, margin: 2 });
+    const buf = await QRCode.toBuffer(activePlayUrl, { width: 300, margin: 2 });
     res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'no-store');
     res.send(buf);
   } catch (e) {
     res.status(500).send('QR error');
@@ -92,6 +93,7 @@ io.on('connection', (socket) => {
     if (secret === ADMIN_SECRET) {
       adminSockets.add(socket.id);
       socket.emit('state:update', gameStore.getPublicState());
+      socket.emit('qr:updated', { url: activePlayUrl });
     } else {
       socket.emit('admin:error', 'Secret invalide');
     }
@@ -145,6 +147,13 @@ io.on('connection', (socket) => {
   socket.on('admin:forceWin', () => {
     if (!adminSockets.has(socket.id)) return;
     gameStore.forceWin();
+  });
+
+  socket.on('admin:setPlayUrl', ({ url }: { url: string }) => {
+    if (!adminSockets.has(socket.id)) return;
+    const trimmed = String(url ?? '').trim();
+    activePlayUrl = trimmed || (PUBLIC_URL.replace(/\/$/, '') + '/play');
+    io.emit('qr:updated', { url: activePlayUrl });
   });
 
   // ---- Map editor (admin-only, with ack callbacks) ----
