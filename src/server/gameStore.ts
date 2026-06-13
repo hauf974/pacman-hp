@@ -39,6 +39,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   autoMove: false,
   startingLevel: 1,
   avatarIcon: 'hat',
+  levelMaps: ['', '', '', '', ''],
 };
 
 // Rate limiter constants
@@ -291,6 +292,11 @@ export class GameStore {
 
   private startLevel() {
     const s = this.state;
+    // Load level-specific map if one is configured for this level.
+    const levelMapName = s.settings.levelMaps?.[s.level - 1] ?? '';
+    if (levelMapName) {
+      s.activeMap = loadMapSafe(levelMapName);
+    }
     s.avatar.r = s.activeMap.avatarStart.r;
     s.avatar.c = s.activeMap.avatarStart.c;
     s.avatar.dir = 'left';

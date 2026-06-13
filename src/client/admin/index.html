@@ -324,6 +324,22 @@
   </div>
 </div>
 
+<!-- Level maps -->
+<div class="section">
+  <h2>Cartes par niveau</h2>
+  <div style="font-size:12px; color:#806040; margin-bottom:10px">
+    Choisissez une carte pour chaque niveau. « Carte active (défaut) » conserve le comportement actuel.
+    Le changement prend effet au début du niveau suivant.
+  </div>
+  <div id="level-maps-list">
+    <div class="control-row"><label>Niveau 1 — Rusard</label><select id="set-level-map-1" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+    <div class="control-row"><label>Niveau 2 — + Miss Teigne</label><select id="set-level-map-2" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+    <div class="control-row"><label>Niveau 3 — + Rogue</label><select id="set-level-map-3" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+    <div class="control-row"><label>Niveau 4 — + Peeves</label><select id="set-level-map-4" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+    <div class="control-row"><label>Niveau 5 — + Baron Sanglant</label><select id="set-level-map-5" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+  </div>
+</div>
+
 <!-- Map editor -->
 <div class="section">
   <h2>Éditeur de cartes</h2>
@@ -470,6 +486,7 @@ function sendSettings() {
     titleFont:         document.getElementById('set-title-font').value,
     footprints:        document.getElementById('set-footprints').value === 'true',
     avatarIcon:        document.getElementById('set-avatar-icon').value,
+    levelMaps:         [1,2,3,4,5].map(i => document.getElementById('set-level-map-' + i)?.value || ''),
   });
 }
 
@@ -520,6 +537,11 @@ function updateUI(s) {
     document.getElementById('set-footprints').value = String(s.settings.footprints || false);
   if (document.activeElement.id !== 'set-avatar-icon')
     document.getElementById('set-avatar-icon').value = s.settings.avatarIcon || 'hat';
+  const levelMaps = s.settings.levelMaps || ['', '', '', '', ''];
+  for (let i = 1; i <= 5; i++) {
+    const sel = document.getElementById('set-level-map-' + i);
+    if (sel && document.activeElement !== sel) sel.value = levelMaps[i - 1] || '';
+  }
 
   // Player list
   const list = document.getElementById('player-list');
@@ -769,12 +791,25 @@ function edClear() {
   edShowErrors([]); edRender();
 }
 
+function refreshLevelMapSelects(names) {
+  const defaultOpt = '<option value="">— Carte active (défaut) —</option>';
+  const mapOpts = (names || []).map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+  for (let i = 1; i <= 5; i++) {
+    const sel = document.getElementById('set-level-map-' + i);
+    if (!sel) continue;
+    const cur = sel.value;
+    sel.innerHTML = defaultOpt + mapOpts;
+    if (cur) sel.value = cur; // preserve selection after refresh
+  }
+}
+
 function edRefreshList(selectName) {
   if (!authed) return;
   socket.emit('map:list', (names) => {
     const sel = document.getElementById('ed-maps');
     sel.innerHTML = (names || []).map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
     if (selectName && names.includes(selectName)) sel.value = selectName;
+    refreshLevelMapSelects(names);
   });
 }
 function edLoad() {

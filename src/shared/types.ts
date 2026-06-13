@@ -93,6 +93,8 @@ export interface GameSettings {
   startingLevel: number;
   /** Avatar sprite: 'hat' = sorcerer hat (default), 'hp' = hp.png image. */
   avatarIcon: 'hat' | 'hp';
+  /** Map name for each of the 5 levels; empty string = use the active map. Length must be 5. */
+  levelMaps: string[];
 }
 
 export interface GameState {
