@@ -160,7 +160,18 @@ body {
   flex: 1; display: flex; align-items: center; justify-content: center;
   position: relative; background: var(--canvas-bg); overflow: hidden;
 }
-#game-canvas { display: block; image-rendering: pixelated; }
+/* Texture covers the entire game zone (margins around the canvas) */
+[data-atmo="parchemin"] #game-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/screen/assets/texture_parchemin.jpg');
+  background-repeat: repeat;
+  opacity: 0.20;
+  pointer-events: none;
+  z-index: 1;
+}
+#game-canvas { display: block; image-rendering: pixelated; position: relative; z-index: 2; }
 
 /* ── Overlay (lobby / pause / level / gameover / win) ───────────────────── */
 #overlay {
