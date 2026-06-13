@@ -269,10 +269,13 @@ Map {
 - **Cartes par niveau** : l'admin peut assigner une carte différente à chacun des 5 niveaux (section « Cartes par niveau »). Un niveau sans carte assignée utilise la carte active globale. La carte est chargée au **début du niveau** (transition), jamais en cours de niveau.
 
 ### 7.2 Mode Démocratie
-- Inputs collectés sur une **fenêtre glissante de X secondes** (réglable, « Durée d'un vote »).
+- Inputs collectés pendant une **fenêtre de X secondes** (réglable, « Durée d'un vote »).
+- **La fenêtre est aussi la cadence de résolution** : à chaque fin de fenêtre, un seul « tick de décision » se produit, puis le buffer est remis à zéro pour la fenêtre suivante.
 - À chaque tick de décision : **vote majoritaire** → direction la plus demandée appliquée.
 - **Égalité** : **choix aléatoire** entre les directions à égalité.
-- Le cadre de vote (§4.4) affiche la répartition en temps réel.
+- **Déplacement auto OFF (défaut)** : chaque tick de décision produit **une seule case** de déplacement → fenêtre 2 s = ~1 case / 2 s.
+- **Déplacement auto ON** : chaque tick de décision met à jour la direction courante ; l'avatar **continue d'avancer en continu** à sa vitesse (`avatarSpeed`) et ne change de cap qu'à chaque résolution.
+- Le cadre de vote (§4.4) affiche la répartition en temps réel (votes accumulés depuis la dernière résolution).
 
 ### 7.3 Mode Chaos
 - **Tous les inputs entrent dans une file appliquée séquentiellement** (chaque input demande un virage à la prochaine intersection compatible). C'est l'empilement des intentions de tous les joueurs qui produit le chaos.
@@ -456,7 +459,7 @@ L'avatar reste lisible à distance dans les deux modes (glow + ombre). L'image h
 | 24 | Tunnels | Wraparound gauche↔droite et haut↔bas si les murs le permettent. |
 | 25 | Persistance cartes | Fichiers JSON dans un volume Docker (sans base de données). |
 | 26 | Changement de carte | Au lobby / reset (pas en plein niveau). |
-| 27 | Déplacement auto | Réglable admin (on/off). Off = 1 case par input. |
+| 27 | Déplacement auto | Réglable admin (on/off). **Off** = 1 case par tick de décision (= 1 case / voteWindow). **On** = déplacement continu à `avatarSpeed` ; direction mise à jour à chaque résolution de vote. |
 | 28 | IA poursuivants | BFS dans le labyrinthe (tunnel inclus) + 30 % aléatoire. |
 | 29 | Tunnels visuels | Ouvertures de tunnel distinguables sur /screen (flèche colorée). |
 | 30 | Plein écran adaptatif | 100 vw × 100 vh, redimensionnement dynamique. |

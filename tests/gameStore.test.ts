@@ -219,6 +219,54 @@ describe('autoMove=false: manual movement (one input = one step)', () => {
   });
 });
 
+// ── M4h1: Democracy cadence — vote window governs movement rate ───────────────
+
+describe('Democracy cadence (M4h1): autoMove=OFF, voteWindowSec=2', () => {
+  /**
+   * Bug: with autoMove=OFF the avatar used to move every avatarSpeed period
+   * (e.g. 250 ms at speed=4) rather than once per voteWindow.
+   * Fix: a dedicated democracyAccum fires at voteWindowMs; one step per window.
+   * Round-number tick sizes are used here to avoid floating-point accumulation edge cases.
+   */
+  test('avatar moves once per voteWindow, not at avatarSpeed cadence', () => {
+    const gs = makeStore();
+    gs.playerJoin('s1', 'Tester', 't1');
+    // avatarSpeed=10 → period=100 ms; before the fix this would produce 20 moves/2 s
+    gs.setSettings({ autoMove: false, voteWindowSec: 2, avatarSpeed: 10 });
+    gs.start();
+    gs.playerInput('s1', 'right');
+
+    // 1900 ms < 2000 ms window — no resolution yet
+    gs.tick(1900);
+    expect(gs.getPublicState().toursJoues).toBe(0);
+
+    // +200 ms → 2100 ms total → first resolution fires; democracyAccum resets to 100 ms
+    gs.tick(200);
+    expect(gs.getPublicState().toursJoues).toBe(1);
+
+    // +1800 ms (no new votes) → accum = 1900 ms < 2000 ms → no second resolution
+    gs.tick(1800);
+    expect(gs.getPublicState().toursJoues).toBe(1);
+
+    // Add vote, +200 ms → accum = 2100 ms → second resolution fires
+    gs.playerInput('s1', 'right');
+    gs.tick(200);
+    expect(gs.getPublicState().toursJoues).toBe(2);
+  });
+
+  test('no movement occurs before the first window elapses', () => {
+    const gs = makeStore();
+    gs.playerJoin('s1', 'Tester', 't1');
+    gs.setSettings({ autoMove: false, voteWindowSec: 2 });
+    gs.start();
+    gs.playerInput('s1', 'left');
+
+    // 1990 ms — just under the 2 s window
+    gs.tick(1990);
+    expect(gs.getPublicState().toursJoues).toBe(0);
+  });
+});
+
 // ── reset() clears cleanup timers ─────────────────────────────────────────────
 
 describe('reset() cleans up timers', () => {

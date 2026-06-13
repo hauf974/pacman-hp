@@ -93,6 +93,8 @@ export class GameStore {
   private activeMapName = 'pacman';
   private avatarTickAccum = 0;
   private pursuerTickAccum = 0;
+  // Fires every voteWindowMs in democracy mode — governs move cadence
+  private democracyAccum = 0;
 
   // Cleanup timers keyed by player token (token is stable across socket rebinds)
   private cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -184,58 +186,88 @@ export class GameStore {
     }
 
     const now = Date.now();
-    const avatarPeriodMs = 1000 / s.avatar.speed;
+    const voteWindowMs = s.settings.voteWindowSec * 1000;
     const pursuerPeriodMs = 1000 / s.settings.pursuerSpeed;
 
-    // Process input for avatar movement direction
-    this.avatarTickAccum += dtMs;
-    if (this.avatarTickAccum >= avatarPeriodMs) {
-      this.avatarTickAccum -= avatarPeriodMs;
+    if (s.mode === 'democracy') {
+      // Democracy: the vote window IS the movement cadence.
+      // democracyAccum fires once per voteWindow — one resolution per window.
+      this.democracyAccum += dtMs;
 
-      let hasInput = false;
-      if (s.mode === 'democracy') {
-        const dir = aggregateDemocracy(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
+      if (this.democracyAccum >= voteWindowMs) {
+        this.democracyAccum -= voteWindowMs;
+
+        const dir = aggregateDemocracy(s.inputBuffer, voteWindowMs, now);
         // Capture tally before clearing so the UI shows what was just voted
-        s.voteTally = buildVoteTally(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
+        s.voteTally = buildVoteTally(s.inputBuffer, voteWindowMs, now);
+        // Each window is a fresh ballot
+        s.inputBuffer = [];
+
         if (dir) {
           applyDirectionToAvatar(s, dir);
           s.toursJoues++;
-          hasInput = true;
-          // Manual mode: clear the buffer so the same vote cannot re-fire on the next tick
-          if (!s.settings.autoMove) s.inputBuffer = [];
+        }
+
+        if (!s.settings.autoMove) {
+          // Manual mode: one step per window, only when a direction won
+          if (dir) {
+            tickAvatar(s);
+            if (s.objectiveMode === 'collect') checkWandCollection(s);
+            if (checkRoomEntry(s)) {
+              const canAdvance = s.objectiveMode === 'room' || allWandsCollected(s);
+              if (canAdvance) { this.advanceLevel(); return; }
+            }
+            if (checkCollisions(s) && this.handleCollision()) return;
+          }
         }
       } else {
-        // Chaos: apply next queued direction
+        // Between resolutions: update tally for live display
+        s.voteTally = buildVoteTally(s.inputBuffer, voteWindowMs, now);
+      }
+
+      if (s.settings.autoMove) {
+        // Continuous movement at avatarSpeed; direction changes at each vote resolution
+        const avatarPeriodMs = 1000 / s.avatar.speed;
+        this.avatarTickAccum += dtMs;
+        if (this.avatarTickAccum >= avatarPeriodMs) {
+          this.avatarTickAccum -= avatarPeriodMs;
+          tickAvatar(s);
+          if (s.objectiveMode === 'collect') checkWandCollection(s);
+          if (checkRoomEntry(s)) {
+            const canAdvance = s.objectiveMode === 'room' || allWandsCollected(s);
+            if (canAdvance) { this.advanceLevel(); return; }
+          }
+          if (checkCollisions(s) && this.handleCollision()) return;
+        }
+      }
+    } else {
+      // Chaos mode: unchanged — consumes one queued direction per avatarSpeed period
+      const avatarPeriodMs = 1000 / s.avatar.speed;
+      this.avatarTickAccum += dtMs;
+      let hasInput = false;
+
+      if (this.avatarTickAccum >= avatarPeriodMs) {
+        this.avatarTickAccum -= avatarPeriodMs;
+
         const dir = consumeChaosInput(s.chaosQueue);
         if (dir !== null) {
           applyDirectionToAvatar(s, dir);
           s.toursJoues++;
           hasInput = true;
         }
-        s.voteTally = buildVoteTally(s.inputBuffer, s.settings.voteWindowSec * 1000, now);
-      }
+        s.voteTally = buildVoteTally(s.inputBuffer, voteWindowMs, now);
 
-      // autoMove=false: only step when an input was actually played
-      if (s.settings.autoMove || hasInput) {
-        tickAvatar(s);
-      }
-
-      // Check wand collection
-      if (s.objectiveMode === 'collect') {
-        checkWandCollection(s);
-      }
-
-      // Check room entry
-      if (checkRoomEntry(s)) {
-        const canAdvance = s.objectiveMode === 'room' || allWandsCollected(s);
-        if (canAdvance) {
-          this.advanceLevel();
-          return;
+        if (s.settings.autoMove || hasInput) {
+          tickAvatar(s);
         }
-      }
 
-      // Check collisions after avatar move
-      if (checkCollisions(s) && this.handleCollision()) return;
+        if (s.objectiveMode === 'collect') checkWandCollection(s);
+        if (checkRoomEntry(s)) {
+          const canAdvance = s.objectiveMode === 'room' || allWandsCollected(s);
+          if (canAdvance) { this.advanceLevel(); return; }
+        }
+        if (checkCollisions(s) && this.handleCollision()) return;
+      }
     }
 
     // Tick pursuers
@@ -245,7 +277,6 @@ export class GameStore {
       for (const pursuer of s.pursuers) {
         tickPursuer(s.activeMap, pursuer, s.avatar);
       }
-      // Check collisions after pursuer move
       if (checkCollisions(s) && this.handleCollision()) return;
     }
 
@@ -312,6 +343,7 @@ export class GameStore {
     s.status = 'playing';
     this.avatarTickAccum = 0;
     this.pursuerTickAccum = 0;
+    this.democracyAccum = 0;
     this.broadcast();
   }
 
@@ -344,6 +376,7 @@ export class GameStore {
     this.state = createInitialState(this.activeMapName);
     this.avatarTickAccum = 0;
     this.pursuerTickAccum = 0;
+    this.democracyAccum = 0;
     this.broadcast();
   }
 
