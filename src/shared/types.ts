@@ -121,6 +121,8 @@ export interface MapGenParams {
   /** Number of pursuer spawn points to place (1–5). */
   spawnCount: number;
   seed?: number;
+  /** When true, eliminate all dead-end corridors (fully braided maze). */
+  noBraid?: boolean;
 }
 
 export interface MapValidation {

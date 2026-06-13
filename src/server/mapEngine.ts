@@ -220,7 +220,7 @@ interface CarveResult {
   tunnels: { horizontal: number[]; vertical: number[] };
 }
 
-function carve(rng: () => number, W: number, H: number, density: number): CarveResult {
+function carve(rng: () => number, W: number, H: number, density: number, noBraid = false): CarveResult {
   const cells: CellType[][] = Array.from({ length: H }, () => Array<CellType>(W).fill(WALL));
 
   // Maze cells sit at (1 + nr*2, 1 + nc*2)
@@ -324,6 +324,35 @@ function carve(rng: () => number, W: number, H: number, density: number): CarveR
   cells[H - 1][tCol] = CORRIDOR;
   cells[H - 2][tCol] = CORRIDOR;
 
+  // Full braiding: multi-pass dead-end removal runs after room/door/tunnel so that
+  // corridors isolated by room sealing are also resolved.
+  if (noBraid) {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let r = 1; r < H - 1; r++) {
+        for (let c = 1; c < W - 1; c++) {
+          if (cells[r][c] !== CORRIDOR) continue;
+          const corridorNb = STEPS.filter(([dr, dc]) =>
+            r + dr >= 1 && r + dr <= H - 2 && c + dc >= 1 && c + dc <= W - 2 &&
+            cells[r + dr][c + dc] === CORRIDOR,
+          ).length;
+          if (corridorNb === 1) {
+            const cands = STEPS.filter(([dr, dc]) =>
+              r + 2 * dr >= 1 && r + 2 * dr <= H - 2 && c + 2 * dc >= 1 && c + 2 * dc <= W - 2 &&
+              cells[r + dr][c + dc] === WALL && cells[r + 2 * dr][c + 2 * dc] === CORRIDOR,
+            );
+            if (cands.length > 0) {
+              const [dr, dc] = pick(rng, cands);
+              cells[r + dr][c + dc] = CORRIDOR;
+              changed = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
   return { cells, roomDoor: { r: doorR, c: doorC }, tunnels: { horizontal: [tRow], vertical: [tCol] } };
 }
 
@@ -426,7 +455,7 @@ export function generateMap(params: MapGenParams): { ok: boolean; map?: MapData;
   const MAX_ATTEMPTS = 600;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const rng = makeRng((baseSeed + attempt) >>> 0);
-    const { cells, roomDoor, tunnels } = carve(rng, width, height, density);
+    const { cells, roomDoor, tunnels } = carve(rng, width, height, density, params.noBraid ?? false);
     placeMarkers(cells, height, width, roomDoor, spawnCount);
     const map = assembleMap('carte-generee', cells, roomDoor, tunnels);
     const v = validateMap(map);

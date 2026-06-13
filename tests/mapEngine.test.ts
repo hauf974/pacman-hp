@@ -344,6 +344,32 @@ describe('generateMap', () => {
     expect(spawns).toBeLessThanOrEqual(5);
   });
 
+  test('noBraid=true élimine tous les culs-de-sac (couloirs non-salle avec 1 voisin passable)', () => {
+    const res = generateMap({ width: 23, height: 23, density: 0.4, spawnCount: 3, seed: 42, noBraid: true });
+    expect(res.ok).toBe(true);
+    const m = res.map!;
+    const H = m.height, W = m.width;
+    const STEPS = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+    const isPass = (r: number, c: number) =>
+      r >= 0 && r < H && c >= 0 && c < W && [0, 2, 3, 4].includes(m.cells[r][c]);
+    let deadEnds = 0;
+    for (let r = 1; r < H - 1; r++) {
+      for (let c = 1; c < W - 1; c++) {
+        const v = m.cells[r][c];
+        if (v !== 0 && v !== 3 && v !== 4) continue; // skip walls and room
+        const nb = STEPS.filter(([dr, dc]) => isPass(r + dr, c + dc)).length;
+        if (nb === 1) deadEnds++;
+      }
+    }
+    expect(deadEnds).toBe(0);
+  });
+
+  test('noBraid=true produit une carte valide', () => {
+    const res = generateMap({ width: 23, height: 23, density: 0.5, spawnCount: 4, seed: 7, noBraid: true });
+    expect(res.ok).toBe(true);
+    expect(validateMap(res.map!).valid).toBe(true);
+  });
+
   test('a freshly generated map declares tunnels with both ends open', () => {
     const res = generateMap({ width: 23, height: 23, density: 0.4, spawnCount: 4, seed: 4 });
     expect(res.ok).toBe(true);
