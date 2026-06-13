@@ -161,10 +161,12 @@
   <span id="auth-status"></span>
 </div>
 
-<!-- Status -->
+<!-- ═══════════════════ 1. CONTRÔLE DE PARTIE ═══════════════════ -->
 <div class="section">
-  <h2>État de la partie</h2>
-  <div id="status-info">
+  <h2>Contrôle de partie</h2>
+
+  <!-- État live -->
+  <div id="status-info" style="margin-bottom:14px">
     <div class="stat-box"><div class="stat-label">Statut</div><div class="stat-value" id="s-status">—</div></div>
     <div class="stat-box"><div class="stat-label">Niveau</div><div class="stat-value" id="s-level">—</div></div>
     <div class="stat-box"><div class="stat-label">Vies</div><div class="stat-value" id="s-lives">—</div></div>
@@ -172,35 +174,38 @@
     <div class="stat-box"><div class="stat-label">Mode</div><div class="stat-value" id="s-mode">—</div></div>
     <div class="stat-box"><div class="stat-label">Tours</div><div class="stat-value" id="s-tours">—</div></div>
   </div>
-</div>
 
-<!-- Controls -->
-<div class="section">
-  <h2>Contrôles</h2>
-  <div class="btn-row">
+  <!-- Actions primaires -->
+  <div class="btn-row" style="margin-bottom:12px">
     <button class="btn" onclick="send('admin:start')">▶ Lancer / Reprendre</button>
     <button class="btn" onclick="send('admin:pause')">⏸ Pause</button>
     <button class="btn danger" onclick="send('admin:reset')">↺ Reset</button>
   </div>
-</div>
 
-<!-- QR / URL de la manette -->
-<div class="section">
-  <h2>URL de la manette (QR code)</h2>
+  <!-- Actions de forçage -->
+  <div class="btn-row" style="margin-bottom:12px">
+    <button class="btn" onclick="send('admin:forceNextLevel')">⏭ Niveau suivant</button>
+    <button class="btn danger" onclick="confirmSend('admin:forceGameOver', 'Forcer un game over ?')">💀 Game Over</button>
+    <button class="btn danger" onclick="confirmSend('admin:forceWin', 'Forcer la victoire ?')">🏆 Victoire</button>
+  </div>
+
+  <!-- Aller à un niveau précis -->
   <div class="control-row">
-    <label>URL de jeu</label>
-    <input type="text" id="play-url-input" placeholder="https://pacmage.ltn.re/play" style="width:320px; font-family:monospace; font-size:13px" />
-    <button class="btn" onclick="applyPlayUrl()">Appliquer</button>
-    <button class="btn" onclick="resetPlayUrl()" title="Remettre la valeur par défaut (PUBLIC_URL)">↺ Défaut</button>
-  </div>
-  <div style="font-size:12px; color:#806040; margin-top:4px; padding-left:172px">
-    URL active : <span id="current-play-url" style="color:#c8a96e; font-family:monospace; word-break:break-all">—</span>
+    <label>Aller au niveau</label>
+    <select id="set-force-level">
+      <option value="1">Niveau 1 — Rusard</option>
+      <option value="2">Niveau 2 — + Miss Teigne</option>
+      <option value="3">Niveau 3 — + Rogue</option>
+      <option value="4">Niveau 4 — + Peeves</option>
+      <option value="5">Niveau 5 — + Baron Sanglant</option>
+    </select>
+    <button class="btn" onclick="forceLevel()">Forcer</button>
   </div>
 </div>
 
-<!-- Settings -->
+<!-- ═══════════════════ 2. RÉGLAGES DE JEU ═══════════════════ -->
 <div class="section">
-  <h2>Réglages</h2>
+  <h2>Réglages de jeu</h2>
 
   <div class="control-row">
     <label>Mode de contrôle</label>
@@ -256,6 +261,25 @@
       <option value="5">Niveau 5 — + Baron Sanglant</option>
     </select>
   </div>
+</div>
+
+<!-- ═══════════════════ 3. CARTES PAR NIVEAU ═══════════════════ -->
+<div class="section">
+  <h2>Cartes par niveau</h2>
+  <div style="font-size:12px; color:#806040; margin-bottom:10px">
+    Choisissez une carte pour chaque niveau. « Carte active (défaut) » conserve la carte globale.
+    Le changement prend effet au début de chaque niveau.
+  </div>
+  <div class="control-row"><label>Niveau 1 — Rusard</label><select id="set-level-map-1" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+  <div class="control-row"><label>Niveau 2 — + Miss Teigne</label><select id="set-level-map-2" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+  <div class="control-row"><label>Niveau 3 — + Rogue</label><select id="set-level-map-3" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+  <div class="control-row"><label>Niveau 4 — + Peeves</label><select id="set-level-map-4" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+  <div class="control-row"><label>Niveau 5 — + Baron Sanglant</label><select id="set-level-map-5" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
+</div>
+
+<!-- ═══════════════════ 4. AMBIANCE & AFFICHAGE ═══════════════════ -->
+<div class="section">
+  <h2>Ambiance &amp; affichage</h2>
 
   <div class="control-row">
     <label>Atmosphère</label>
@@ -300,51 +324,27 @@
       <option value="hp">Harry Potter (hp.png)</option>
     </select>
   </div>
+</div>
 
+<!-- ═══════════════════ 5. QR & URL ═══════════════════ -->
+<div class="section">
+  <h2>QR &amp; URL de la manette</h2>
   <div class="control-row">
-    <label>Forcer niveau précis</label>
-    <select id="set-force-level">
-      <option value="1">Niveau 1 — Rusard</option>
-      <option value="2">Niveau 2 — + Miss Teigne</option>
-      <option value="3">Niveau 3 — + Rogue</option>
-      <option value="4">Niveau 4 — + Peeves</option>
-      <option value="5">Niveau 5 — + Baron Sanglant</option>
-    </select>
-    <button class="btn" onclick="forceLevel()">Forcer</button>
+    <label>URL de jeu</label>
+    <input type="text" id="play-url-input" placeholder="https://pacmage.ltn.re/play" style="width:320px; font-family:monospace; font-size:13px" />
+    <button class="btn" onclick="applyPlayUrl()">Appliquer</button>
+    <button class="btn" onclick="resetPlayUrl()" title="Remettre la valeur par défaut (PUBLIC_URL)">↺ Défaut</button>
+  </div>
+  <div style="font-size:12px; color:#806040; margin-top:4px; padding-left:172px">
+    URL active : <span id="current-play-url" style="color:#c8a96e; font-family:monospace; word-break:break-all">—</span>
   </div>
 </div>
 
-<!-- Force actions -->
-<div class="section">
-  <h2>Actions immédiates</h2>
-  <div class="btn-row">
-    <button class="btn" onclick="send('admin:forceNextLevel')">⏭ Niveau suivant</button>
-    <button class="btn danger" onclick="confirmSend('admin:forceGameOver', 'Forcer un game over ?')">💀 Forcer Game Over</button>
-    <button class="btn danger" onclick="confirmSend('admin:forceWin', 'Forcer la victoire ?')">🏆 Forcer Victoire</button>
-  </div>
-</div>
-
-<!-- Level maps -->
-<div class="section">
-  <h2>Cartes par niveau</h2>
-  <div style="font-size:12px; color:#806040; margin-bottom:10px">
-    Choisissez une carte pour chaque niveau. « Carte active (défaut) » conserve le comportement actuel.
-    Le changement prend effet au début du niveau suivant.
-  </div>
-  <div id="level-maps-list">
-    <div class="control-row"><label>Niveau 1 — Rusard</label><select id="set-level-map-1" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
-    <div class="control-row"><label>Niveau 2 — + Miss Teigne</label><select id="set-level-map-2" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
-    <div class="control-row"><label>Niveau 3 — + Rogue</label><select id="set-level-map-3" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
-    <div class="control-row"><label>Niveau 4 — + Peeves</label><select id="set-level-map-4" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
-    <div class="control-row"><label>Niveau 5 — + Baron Sanglant</label><select id="set-level-map-5" onchange="sendSettings()"><option value="">— Carte active (défaut) —</option></select></div>
-  </div>
-</div>
-
-<!-- Map editor -->
+<!-- ═══════════════════ 6. ÉDITEUR DE CARTES ═══════════════════ -->
 <div class="section">
   <h2>Éditeur de cartes</h2>
 
-  <!-- Map management -->
+  <!-- Gestion des cartes -->
   <div style="margin-bottom:12px">
     <div class="ed-field">
       <label>Cartes</label>
@@ -367,7 +367,7 @@
     </div>
   </div>
 
-  <!-- Grid size + generation -->
+  <!-- Taille de grille + génération -->
   <div style="margin-bottom:12px">
     <div class="ed-field"><label>Largeur</label><input type="number" id="ed-w" min="11" max="41" step="2" value="23" /></div>
     <div class="ed-field"><label>Hauteur</label><input type="number" id="ed-h" min="11" max="41" step="2" value="23" /></div>
@@ -379,6 +379,7 @@
     <button class="btn" style="padding:7px 14px" onclick="edGenerate()">🎲 Générer</button>
   </div>
 
+  <!-- Canvas + outils -->
   <div id="ed-canvas-wrap">
     <canvas id="ed-canvas" width="460" height="460"></canvas>
     <div class="ed-side">
@@ -401,13 +402,13 @@
       <div class="ed-legend">
         Clic/glisser pour peindre. <b>Porte</b> : une seule, sur une case couloir bordant la Salle.
         <b>Avatar</b> : unique. <b>Spawns</b> : 1 à 5. <b>Tunnel</b> : cliquez un bord (gauche/droite ou haut/bas) — les deux côtés s'ouvrent.<br>
-        Le changement de carte active ne s'applique qu'au lobby / après reset.
+        Activer une carte n'est possible qu'au lobby / après reset.
       </div>
     </div>
   </div>
 </div>
 
-<!-- Players -->
+<!-- ═══════════════════ 7. JOUEURS ═══════════════════ -->
 <div class="section">
   <h2>Joueurs connectés</h2>
   <div id="player-list"><em style="color:#604030;font-size:14px">Aucun joueur</em></div>
