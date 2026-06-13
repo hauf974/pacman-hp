@@ -219,6 +219,99 @@ describe('autoMove=false: manual movement (one input = one step)', () => {
   });
 });
 
+// ── M4h2: Admin settings → live effect (regression tests) ────────────────────
+
+describe('setSettings — speed sync on live entities (M4h2)', () => {
+  test('avatarSpeed change is reflected immediately in avatar.speed', () => {
+    const gs = makeStore();
+    startStore(gs);
+    gs.setSettings({ avatarSpeed: 8 });
+    expect(gs.getPublicState().avatar.speed).toBe(8);
+    gs.setSettings({ avatarSpeed: 1.5 });
+    expect(gs.getPublicState().avatar.speed).toBe(1.5);
+  });
+
+  test('pursuerSpeed change updates settings.pursuerSpeed immediately', () => {
+    const gs = makeStore();
+    startStore(gs);
+    gs.setSettings({ pursuerSpeed: 6 });
+    expect(gs.getPublicState().settings.pursuerSpeed).toBe(6);
+  });
+
+  test('pursuerSpeed change is used by tick (pursuers move faster)', () => {
+    const gs = makeStore();
+    startStore(gs);
+    // Very slow speed (period = 10 s): no pursuer tick in 1 s
+    gs.setSettings({ pursuerSpeed: 0.1 });
+    gs.tick(999);
+    const stateA = gs.getPublicState();
+    // Still same positions — pursuerTickAccum (999ms) < 10 000ms period
+    expect(stateA.settings.pursuerSpeed).toBe(0.1);
+
+    // Change to high speed (period = 100 ms): should tick many times in next 1 s
+    gs.setSettings({ pursuerSpeed: 10 });
+    expect(gs.getPublicState().settings.pursuerSpeed).toBe(10);
+  });
+
+  test('voteWindowSec change takes effect on next democracy resolution', () => {
+    const gs = makeStore();
+    startStore(gs);
+    gs.setSettings({ autoMove: false, voteWindowSec: 1 });
+    gs.playerInput('s0', 'right');
+
+    // Tick 0.9 s — no resolution with 1 s window
+    gs.tick(900);
+    expect(gs.getPublicState().toursJoues).toBe(0);
+
+    // Change to 3 s window — next resolution now needs 3 s from last reset
+    gs.setSettings({ voteWindowSec: 3 });
+    gs.tick(200); // only 1.1 s elapsed since start, not 3 s
+    expect(gs.getPublicState().toursJoues).toBe(0); // still no resolution
+
+    // Add vote, tick to 3 s total → resolution fires
+    gs.playerInput('s0', 'right');
+    gs.tick(2000); // 1.1 + 2.0 = 3.1 s → fires
+    expect(gs.getPublicState().toursJoues).toBe(1);
+  });
+
+  test('autoMove setting is reflected in public state', () => {
+    const gs = makeStore();
+    startStore(gs);
+    gs.setSettings({ autoMove: true });
+    expect(gs.getPublicState().settings.autoMove).toBe(true);
+    gs.setSettings({ autoMove: false });
+    expect(gs.getPublicState().settings.autoMove).toBe(false);
+  });
+
+  test('objectiveMode change is reflected in public state', () => {
+    const gs = makeStore();
+    startStore(gs);
+    gs.setSettings({ objectiveMode: 'room' } as any);
+    expect(gs.getPublicState().objectiveMode).toBe('room');
+    gs.setSettings({ objectiveMode: 'collect' } as any);
+    expect(gs.getPublicState().objectiveMode).toBe('collect');
+  });
+
+  test('footprints setting accepts new palette values', () => {
+    const gs = makeStore();
+    startStore(gs);
+    for (const level of ['off', 'light', 'medium', 'max'] as const) {
+      gs.setSettings({ footprints: level });
+      expect(gs.getPublicState().settings.footprints).toBe(level);
+    }
+  });
+
+  test('multiple settings can be changed in a single call', () => {
+    const gs = makeStore();
+    startStore(gs);
+    gs.setSettings({ avatarSpeed: 6, pursuerSpeed: 3, voteWindowSec: 1.5 });
+    const pub = gs.getPublicState();
+    expect(pub.avatar.speed).toBe(6);
+    expect(pub.settings.pursuerSpeed).toBe(3);
+    expect(pub.settings.voteWindowSec).toBe(1.5);
+  });
+});
+
 // ── M4h1: Democracy cadence — vote window governs movement rate ───────────────
 
 describe('Democracy cadence (M4h1): autoMove=OFF, voteWindowSec=2', () => {

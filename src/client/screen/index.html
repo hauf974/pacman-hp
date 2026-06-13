@@ -424,23 +424,30 @@ function perp(dir) { // unit perpendicular (for foot offsets)
 }
 
 // ── Draw: footprints ─────────────────────────────────────────────────────
-function drawTrails(cell, theme, footprintsOn) {
-  if (!footprintsOn) return;
+// footprintsLevel: 'off' | 'light' | 'medium' | 'max'
+function drawTrails(cell, theme, footprintsLevel) {
+  if (!footprintsLevel || footprintsLevel === 'off') return;
+  const cfg = footprintsLevel === 'light'  ? { maxAlpha: 0.12, len: 4 }
+            : footprintsLevel === 'medium' ? { maxAlpha: 0.20, len: 8 }
+            :                                { maxAlpha: 0.35, len: TRAIL_MAX };
   for (const [id, steps] of Object.entries(trail)) {
     const isAvatar = id === 'avatar';
     const pType = isAvatar ? null : (state.pursuers.find(p => p.id === id)?.type);
     const col = isAvatar ? theme.footFill : `rgba(${hexToRgb(PURSUER_COLORS[pType] || '#888')},{a})`;
     const n = steps.length;
-    for (let i = 0; i < n - 1; i++) {
+    const drawCount = Math.min(n - 1, cfg.len);
+    if (drawCount <= 0) continue;
+    const start = n - 1 - drawCount;
+    for (let i = start; i < n - 1; i++) {
       const { r, c, dir } = steps[i];
-      const alpha = ((i + 1) / n) * 0.35;
+      const relI = i - start;
+      const alpha = ((relI + 1) / (drawCount + 1)) * cfg.maxAlpha;
       const px = c * cell + cell / 2;
       const py = r * cell + cell / 2;
       const { dr: pr, dc: pc } = perp(dir);
       const off = cell * 0.18;
       const fs = Math.max(1, cell * 0.1);
-      // left foot (step index even = left, odd = right)
-      const side = (i % 2 === 0) ? 1 : -1;
+      const side = (relI % 2 === 0) ? 1 : -1;
       ctx.fillStyle = rgba(col, alpha);
       ctx.beginPath();
       ctx.ellipse(px + pc * off * side, py + pr * off * side, fs * 1.5, fs, 0, 0, Math.PI * 2);
@@ -901,11 +908,12 @@ socket.on('state:update', (s) => {
   const prev = state;
   state = s;
   // Record trails when footprints enabled
-  if (s.settings?.footprints) {
+  const footprintsOn = s.settings?.footprints && s.settings.footprints !== 'off';
+  if (footprintsOn) {
     recordTrail('avatar', s.avatar.r, s.avatar.c, s.avatar.dir);
     for (const p of s.pursuers) recordTrail(p.id, p.r, p.c, p.dir);
     pruneTrails(['avatar', ...s.pursuers.map(p => p.id)]);
-  } else if (prev && !s.settings?.footprints) {
+  } else if (prev && !footprintsOn) {
     // Clear trails when footprints turned off
     for (const k of Object.keys(trail)) delete trail[k];
   }

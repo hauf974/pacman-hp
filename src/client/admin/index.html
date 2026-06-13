@@ -235,12 +235,12 @@
 
   <div class="control-row">
     <label>Vitesse avatar</label>
-    <input type="number" id="set-avatar-speed" min="1" max="12" step="0.5" value="4" onchange="sendSettings()" style="width:80px" />
+    <input type="number" id="set-avatar-speed" min="1" max="12" step="0.5" value="4" onchange="sendSettings()" oninput="sendSettings()" style="width:80px" />
   </div>
 
   <div class="control-row">
     <label>Vitesse poursuivants</label>
-    <input type="number" id="set-pursuer-speed" min="1" max="12" step="0.5" value="2" onchange="sendSettings()" style="width:80px" />
+    <input type="number" id="set-pursuer-speed" min="1" max="12" step="0.5" value="2" onchange="sendSettings()" oninput="sendSettings()" style="width:80px" />
   </div>
 
   <div class="control-row">
@@ -312,8 +312,10 @@
   <div class="control-row">
     <label>Traînées de pas</label>
     <select id="set-footprints" onchange="sendSettings()">
-      <option value="false">Désactivées</option>
-      <option value="true" selected>Activées (empreintes)</option>
+      <option value="off">Désactivées</option>
+      <option value="light">Light (courte, discrète)</option>
+      <option value="medium">Medium (mi-longue)</option>
+      <option value="max" selected>Max (défaut)</option>
     </select>
   </div>
 
@@ -485,7 +487,7 @@ function sendSettings() {
     atmosphere:        document.getElementById('set-atmosphere').value,
     tempo:             document.getElementById('set-tempo').value,
     titleFont:         document.getElementById('set-title-font').value,
-    footprints:        document.getElementById('set-footprints').value === 'true',
+    footprints:        document.getElementById('set-footprints').value,
     avatarIcon:        document.getElementById('set-avatar-icon').value,
     levelMaps:         [1,2,3,4,5].map(i => document.getElementById('set-level-map-' + i)?.value || ''),
   });
@@ -535,7 +537,7 @@ function updateUI(s) {
   if (document.activeElement.id !== 'set-title-font')
     document.getElementById('set-title-font').value = s.settings.titleFont || 'UnifrakturCook';
   if (document.activeElement.id !== 'set-footprints')
-    document.getElementById('set-footprints').value = String(s.settings.footprints || false);
+    document.getElementById('set-footprints').value = s.settings.footprints || 'max';
   if (document.activeElement.id !== 'set-avatar-icon')
     document.getElementById('set-avatar-icon').value = s.settings.avatarIcon || 'hat';
   const levelMaps = s.settings.levelMaps || ['', '', '', '', ''];

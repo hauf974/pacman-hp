@@ -63,7 +63,7 @@ function makeState(
     voteTally: { up: 0, down: 0, left: 0, right: 0 },
     settings: {
       tempo: 'anime', atmosphere: 'parchemin', titleFont: 'UnifrakturCook',
-      footprints: false, pursuerSpeed: 3, avatarSpeed: 4, voteWindowSec: 3,
+      footprints: 'off', pursuerSpeed: 3, avatarSpeed: 4, voteWindowSec: 3,
       wandCountPerLevel: 3, autoMove: true, startingLevel: 1, avatarIcon: 'hat' as const,
       levelMaps: ['', '', '', '', ''],
     },

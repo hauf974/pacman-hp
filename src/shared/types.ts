@@ -82,7 +82,7 @@ export interface GameSettings {
   tempo: 'posed' | 'anime' | 'frenetique';
   atmosphere: 'parchemin' | 'chandelle' | 'sortilege';
   titleFont: string;
-  footprints: boolean;
+  footprints: 'off' | 'light' | 'medium' | 'max';
   pursuerSpeed: number;
   avatarSpeed: number;
   voteWindowSec: number;

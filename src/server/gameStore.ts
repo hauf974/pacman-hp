@@ -31,7 +31,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   tempo: 'anime',
   atmosphere: 'parchemin',
   titleFont: 'UnifrakturCook',
-  footprints: true,
+  footprints: 'max',
   pursuerSpeed: 2,
   avatarSpeed: 4,
   voteWindowSec: 0.5,
