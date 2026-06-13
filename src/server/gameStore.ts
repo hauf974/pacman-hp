@@ -38,6 +38,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   wandCountPerLevel: 5,
   autoMove: false,
   startingLevel: 1,
+  avatarIcon: 'hat',
 };
 
 // Rate limiter constants

@@ -294,6 +294,14 @@
   </div>
 
   <div class="control-row">
+    <label>Icône avatar</label>
+    <select id="set-avatar-icon" onchange="sendSettings()">
+      <option value="hat">Chapeau de sorcier</option>
+      <option value="hp">Harry Potter (hp.png)</option>
+    </select>
+  </div>
+
+  <div class="control-row">
     <label>Forcer niveau précis</label>
     <select id="set-force-level">
       <option value="1">Niveau 1 — Rusard</option>
@@ -460,6 +468,7 @@ function sendSettings() {
     tempo:             document.getElementById('set-tempo').value,
     titleFont:         document.getElementById('set-title-font').value,
     footprints:        document.getElementById('set-footprints').value === 'true',
+    avatarIcon:        document.getElementById('set-avatar-icon').value,
   });
 }
 
@@ -508,6 +517,8 @@ function updateUI(s) {
     document.getElementById('set-title-font').value = s.settings.titleFont || 'UnifrakturCook';
   if (document.activeElement.id !== 'set-footprints')
     document.getElementById('set-footprints').value = String(s.settings.footprints || false);
+  if (document.activeElement.id !== 'set-avatar-icon')
+    document.getElementById('set-avatar-icon').value = s.settings.avatarIcon || 'hat';
 
   // Player list
   const list = document.getElementById('player-list');

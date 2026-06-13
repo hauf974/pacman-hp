@@ -64,7 +64,7 @@ function makeState(
     settings: {
       tempo: 'anime', atmosphere: 'parchemin', titleFont: 'UnifrakturCook',
       footprints: false, pursuerSpeed: 3, avatarSpeed: 4, voteWindowSec: 3,
-      wandCountPerLevel: 3, autoMove: true, startingLevel: 1,
+      wandCountPerLevel: 3, autoMove: true, startingLevel: 1, avatarIcon: 'hat' as const,
     },
     toursJoues: 0,
   };

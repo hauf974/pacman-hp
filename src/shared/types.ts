@@ -91,6 +91,8 @@ export interface GameSettings {
   autoMove: boolean;
   /** Level to start from when a new game begins (1–5). */
   startingLevel: number;
+  /** Avatar sprite: 'hat' = sorcerer hat (default), 'hp' = hp.png image. */
+  avatarIcon: 'hat' | 'hp';
 }
 
 export interface GameState {
