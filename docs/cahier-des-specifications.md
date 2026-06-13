@@ -2,8 +2,8 @@
 
 > Jeu multijoueur collaboratif type *Twitch Plays Pokémon*, projeté sur les écrans d'un bar, contrôlé collectivement par les téléphones des joueurs.
 
-- **Version** : 1.6 (M4f : tunnels réservés à l'avatar, baguettes espacées + hors porte, vote visible Démo seulement, vitesse poursuivants 2, texture parchemin)
-- **Date** : 11 juin 2026
+- **Version** : 1.7 (M4g : texture parchemin pleine zone, icône avatar configurable, génération noBraid, cartes par niveau, ergonomie admin)
+- **Date** : 13 juin 2026
 - **Statut** : 🟢 Validé, prêt à construire
 - **Design de référence** : mockup « pacman-hp » (« Pac-Mage : la carte ensorcelée »), voir §10 et `mockup-reference.png` ; maquette conceptuelle de carte 23×23 voir §6 bis et `map-concept.png`
 
@@ -226,6 +226,7 @@ La zone de jeu (le labyrinthe) est l'élément que l'animateur voudra **affiner,
 
 ### 6 bis.3 Génération aléatoire
 - Bouton **« Générer »** avec paramètres (taille, densité de murs, nombre de spawns poursuivants).
+- Option **« Pas de cul-de-sac »** (case à cocher) : active un braiding complet (multi-passes après pose de la salle/porte/tunnels) qui élimine tous les couloirs à une seule issue. Produit un **labyrinthe braidé** sans impasses, idéal pour des parties plus fluides. Sans cette option, le braiding est probabiliste (certains culs-de-sac restent).
 - **Règles respectées** :
   - couloirs de **1 case de large** (aucune zone ouverte 2×2, hors pièce Salle) ;
   - **style à boucles type Pac-Man** (plusieurs chemins, peu de culs-de-sac) ;
@@ -264,7 +265,8 @@ Map {
 - Une direction n'est appliquée que si un virage est possible ; sinon elle est mise en file jusqu'à la prochaine intersection compatible (comportement Pac-Man classique).
 - Murs = cases grisées de la grille ; pas de traversée.
 - **Tunnels (wraparound)** : la carte possède un **mur de contour** sur tout le pourtour, avec **uniquement les ouvertures de tunnel** comme trouées (rendues visuellement distinctes — flèche colorée). Les tunnels permettent le wraparound **gauche ↔ droite** et **haut ↔ bas**.
-- **La carte est définie par la grille active** (éditeur, §6 bis). Les 5 niveaux se jouent sur la **même carte** ; seul le nombre de poursuivants change. La carte par défaut « pacman » reprend la maquette conceptuelle 23×23.
+- **La carte est définie par la grille active** (éditeur, §6 bis). Par défaut, les 5 niveaux se jouent sur la **même carte** ; seul le nombre de poursuivants change. La carte par défaut « pacman » reprend la maquette conceptuelle 23×23.
+- **Cartes par niveau** : l'admin peut assigner une carte différente à chacun des 5 niveaux (section « Cartes par niveau »). Un niveau sans carte assignée utilise la carte active globale. La carte est chargée au **début du niveau** (transition), jamais en cours de niveau.
 
 ### 7.2 Mode Démocratie
 - Inputs collectés sur une **fenêtre glissante de X secondes** (réglable, « Durée d'un vote »).
@@ -396,6 +398,13 @@ GameState {
 - Baguette (collectible), Salle sur Demande (porte-objectif).
 - D-pad manette thématisé (4 boutons).
 - Habillage UI : cadres parchemin, cœurs (vies), cadre de vote, écran de victoire.
+
+**Icône avatar configurable** (admin, section « Ambiance & affichage ») : deux options disponibles —
+- **Chapeau de sorcier** (dessiné en code, défaut) : chapeau conique, brim, ruban.
+- **hp.png** : image statique (portrait Harry Potter) servie depuis `src/client/screen/assets/hp.png`.
+L'avatar reste lisible à distance dans les deux modes (glow + ombre). L'image hp.png est chargée côté client ; fall-back automatique sur le chapeau si l'image n'est pas encore disponible.
+
+**Texture parchemin** : couvre la **zone de jeu entière** (marges autour du canvas incluses) via un pseudo-élément CSS ::before, en mode Parchemin uniquement.
 
 **Contraintes** : lisibilité à distance (contraste fort, formes simples) ; tout tient en 1920×1080 sans scroll.
 
